@@ -1,0 +1,9 @@
+[DEFAULT]
+database_name = 'OT'
+logfile = './poi.log'
+host = '127.0.0.1'
+port = 3306
+passwd = 'lrock186186186'
+user = 'root'
+charset = 'utf8'
+local_infile = 1
