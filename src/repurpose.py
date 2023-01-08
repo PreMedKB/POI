@@ -26,75 +26,80 @@ def drug_repurpose(somatic_anno, germline_anno, race, disease_id, db, cursor):
   related_target = set(related_target)
   print("%s genes are associated with this tumor type." % len(related_target))
   
+
+  def anno_preprocess(anno, race, source, related_target):
+    anno = anno[anno['Gene.refGene'].isin(related_target)].reset_index(drop=True)
+    anno.insert(0, 'POID', ['%s.%s.indirect' % (source, str(i+1)) for i in anno.index.to_list()])
+    anno.insert(1, 'Origin', source)
+    anno.insert(2, 'Location', anno.Chr+':'+anno.Start.astype(str))
+    anno.insert(3, 'Ref>Alt', anno.Ref+'>'+anno.Alt)
+    # ExonicFunc.refGene for splicing, intronic, UTR, etc., are all '.'.
+    anno.insert(4, 'Function', anno[['ExonicFunc.refGene']])
+    splicing_index = anno[anno['Func.refGene'].str.contains('splicing')].index
+    anno.loc[splicing_index, 'Function'] = 'splicing'
+    
+    # Only keep the first AAChange
+    # anno['AAChange.refGene'] = anno['AAChange.refGene'].str.split(',', expand=True)[0]
+    # anno['GeneDetail.refGene'] = anno['GeneDetail.refGene'].str.split(';', expand=True)[0]
+    anno.insert(5, 'Transcript', '.')
+    anno.insert(6, 'Exon', '.')
+    anno.insert(7, 'Protein_Change', '.')
+    for index, row in anno.iterrows():
+      nm_exon_cc_pc = parse_aachange(row['AAChange.refGene'], row['GeneDetail.refGene'])
+      if nm_exon_cc_pc != []:
+        anno.loc[index, 'Transcript'] = nm_exon_cc_pc[0][0]
+        anno.loc[index, 'Exon'] = nm_exon_cc_pc[0][1]
+        anno.loc[index, 'Protein_Change'] = nm_exon_cc_pc[0][3]
+    
+    # Rename
+    ref_pop = 'AF_%s' % race
+    anno = anno.copy().rename(columns={'Gene.refGene':'Gene', 'ExonicFunc.refGene':'Exonic Function', 'CLNSIG':'Clinical_Significance', ref_pop: 'Population_AF'})
+    
+    # Add 'Pathogenic_Prediction'
+    anno['Population_AF'] = anno['Population_AF'].replace('.', np.nan).astype(float)
+    anno.insert(0, 'Pathogenic_Prediction', 'Tolerated')
+    d_index = anno[(anno.SIFT_pred=="D")|(anno.LRT_pred=="D")|(anno.MutationTaster_pred=="A")|(anno.MutationTaster_pred=="D")|(anno.MutationAssessor_pred=="H")|(anno.MutationAssessor_pred=="M")|(anno.FATHMM_pred=="D")|(anno.PROVEAN_pred=="D")|(anno.MetaSVM_pred=="D")|(anno.MetaLR_pred=="D")].index # (Polyphen2_HDIV_pred=="D")|(Polyphen2_HDIV_pred=="P")|(Polyphen2_HVAR_pred=="D")|(Polyphen2_HVAR_pred=="P")
+    anno.loc[d_index, 'Pathogenic_Prediction'] = 'Deleterious'
+    
+    # Select columns due to the potential difference between germline and somatic txt
+    cols = ['POID', 'Gene', 'Origin', 'Location', 'Ref>Alt', 'Transcript', 'Exon', 'Protein_Change', 'Function', 'Clinical_Significance', 'Pathogenic_Prediction', 'Population_AF']
+    anno_res = anno[cols]
+    
+    return(anno_res)
+  
+  
   # Merge input annotation data
   variant = pd.DataFrame()
   if not somatic_anno.empty:
-    somatic_anno.insert(0, 'Source', 'Somatic')
-    variant = pd.concat([variant, somatic_anno], axis = 0)
+    variant = pd.concat([variant, anno_preprocess(somatic_anno, race, 'Somatic', related_target)], axis = 0)
   if not germline_anno.empty:
-    germline_anno.insert(0, 'Source', 'Germline')
-    # Filter by pathogenic
-    germline_anno_p = germline_anno[germline_anno.CLNSIG.str.contains(r'Pathogenic|Likely_pathogenic', regex=True)]
-    variant = pd.concat([variant, germline_anno_p], axis = 0)
+    # # Filter by pathogenic
+    # germline_anno_p = germline_anno[germline_anno.CLNSIG.str.contains(r'Pathogenic|Likely_pathogenic', regex=True)]
+    # variant = pd.concat([variant, germline_anno_p], axis = 0)
+    variant = pd.concat([variant, anno_preprocess(germline_anno, race, 'Germline', related_target)], axis = 0)
   
-  # Filtering 1: only save this tumor type related genes
+  
+  # Filter by Population_AF, Pathogenic Prediction, Clinical Significance
   if variant.empty is False:
-    variant = variant[variant['Gene.refGene'].isin(related_target)]
-    ref_pop = 'AF_%s' % race
-    cols = ['Source', 'Chr', 'Start', 'Ref', 'Alt', 'Gene.refGene', 'AAChange.refGene', 'ExonicFunc.refGene', ref_pop, 'CLNSIG', 'SIFT_pred'] #, 'Polyphen2_HVAR_pred', 'cosmic95_coding', 'cosmic95_noncoding']
-    varf = variant[cols].reset_index(drop=True)
     # Only retain the first protein change
-    varf = varf.copy().rename(columns={ref_pop: 'Population_AF', 'Gene.refGene':'Gene', 'AAChange.refGene':'AAChange', 'ExonicFunc.refGene':'Consequence'})
-    
-    if varf.empty is False:
-      # varf = varf.drop(['AAChange'], axis=1).join(varf['AAChange'].str.split(',', expand=True).stack().reset_index(level=1, drop=True).rename('AAChange')).drop_duplicates().reset_index(drop = True)
-      # Only save the first one
-      varf = varf.drop(['AAChange'], axis=1).join(varf['AAChange'].str.split(',', expand=True)[0].rename('AAChange')).drop_duplicates().reset_index(drop = True)
-      # varf['AAChange'] = varf['AAChange'].copy().str.split(',', expand=True)[0].map(parse_aachange)
-    
-    # varf.CLNSIG = varf.CLNSIG.map(lambda x: x.replace('_', ' ').title())
-    # varf.columns = ['Source', 'Chr', 'Start', 'Ref', 'Alt', 'Gene', 'AAChange', 'Consequence', 'Population_AF', 'CLNSIG', 'SIFT_pred']#, 'Polyphen2_HVAR_pred']
-    
-    # Filtering 2
-    varf['Population_AF'] = varf['Population_AF'].replace('.', np.nan).astype(float)
-    varf = varf[(varf['SIFT_pred'] == 'D') | (varf['CLNSIG'].str.contains(r'Pathogenic|Likely_pathogenic', regex=True)) | (varf['Population_AF'] < 0.01)] # | (varf['Polyphen2_HVAR_pred'] != 'B')] # dbnsfp33a有Polyphen的信息，但是注释需要将近一个小时，是42c的十倍
-    varf.insert(1, 'Alteration', '')
-    varf.insert(2, 'Clinical_Significance', '')
-    
-    for index, row in varf.iterrows():
-      # Alteration
-      # chrom = "%s:%s:%s:%s" % (row.Chr, str(row.Start), row.Ref, row.Alt)
-      # nm_exon_cc_pc = parse_aachange(row['AAChange'], row['Gene'])
-      # if nm_exon_cc_pc:
-      #   nm, exon, cc, pc = nm_exon_cc_pc[0]
-      #   Alteration = ",".join([chrom, nm, exon, cc, pc]).strip(",")
-      # else:
-      #   Alteration = ",".join([chrom])
-      Alteration = row['AAChange'].strip(row['Gene']).strip(':')
-      varf.loc[index, 'Alteration'] = Alteration
-      # Clinical Significance: Polyphen-2, SIFT, ClinVar
-      clin_sig = []
-      if row.CLNSIG != '.':
-        clin_sig.append("%s (ClinVar)" % row.CLNSIG)
-      if row.SIFT_pred != '.':
-        clin_sig.append("%s (SIFT)" % {'D': 'Deleterious', 'T': 'Tolerated'}[row.SIFT_pred])
-      # if row.Polyphen2_HVAR_pred != '.':
-      #   clin_sig.append("%s (Polyphen2)" % {'B': 'Deleterious', 'T': 'Tolerated'}[row.Polyphen2_HVAR_pred])
-      varf.loc[index, 'Clinical_Significance'] = "; ".join(clin_sig)
-    
-    biomarker_summary = varf[['Gene', 'Alteration', 'Source', 'Consequence', 'Population_AF', 'Clinical_Significance']]
+    index1 = variant[variant['Clinical_Significance'].str.contains(r'Pathogenic|Likely_pathogenic', regex=True)].index.to_list()
+    index2 = variant[variant['Population_AF'] < 0.01].index.to_list()
+    index3 = variant[variant['Pathogenic_Prediction'] == 'Deleterious'].index.to_list()
+    index_123 = index1 + index2 + index3
+    statistic = pd.DataFrame(pd.value_counts(index_123), columns=['Count'])
+    index_final = statistic[statistic.Count > 1].index.to_list()
+    varf = variant[variant.index.isin(index_final)]
   else:
-    biomarker_summary = pd.DataFrame()
+    varf = pd.DataFrame()
   
-  
-  #######################################################################################
-  ### Based on the biomarker summary result, we will try to find the repurposing drugs
-  alt_gene = biomarker_summary.Gene.drop_duplicates().to_list()
-  print('%s genes remained after the filtering of ClinVar, SIFT and Population AF.' % len(alt_gene))
-  ## Load pathway datasets
+
+  ###################
+  # Try to find the repurposing drugs
+  alt_gene = varf.Gene.drop_duplicates().to_list()
+  print('%s genes remained after the filtering of ClinVar, Population_AF, SIFT, LRT, MutationTaster, MutationAssessor, FATHMM, PROVEAN, MetaSVM, MetaLR.' % len(alt_gene))
+  # Load pathway datasets
   hallmark = json.loads(open('./assets/h.all.v7.4.symbols.json').read())
-  
-  ## Find insection
+  # Find insection
   vargene_path_ins = []
   n = 0
   for key in hallmark.keys():
@@ -114,21 +119,20 @@ def drug_repurpose(somatic_anno, germline_anno, race, disease_id, db, cursor):
             if score:
               if type(score) == list:
                 score = max(score)
-              vargene_path_ins.append([im, dt, path, score])
+              vargene_path_ins.append([im, dt, path.title(), score])
   
   print("%s drug targeted abnormal genes are enriched in the same pathway." % len(vargene_path_ins))
   reuse = pd.DataFrame(vargene_path_ins, columns=['Gene', 'Associated_Gene', 'Pathway', 'PPI_Score'])
-  reuse.insert(1, 'User_Alteration', "-")
-  reuse.insert(2, 'Source', "Somatic")
-  reuse.insert(3, 'Population_AF', "-")
-  reuse.insert(4, 'GeneID', "")
   
   # Filtering based on cut-off
-  reuse = reuse[reuse.PPI_Score > 0.98]
-  print("%s of the gene pairs have a confidencial score > 0.98." % reuse.shape[0])
   reuse.sort_values(by = "PPI_Score", inplace=True, ascending=False)
+  cutoff = 0.95
+  reuse = reuse[reuse.PPI_Score >= cutoff]
+  print("%s of the gene pairs have a confidencial score > %s." % (reuse.shape[0], cutoff))
   reuse = reuse.reset_index(drop=True)
   
+  # Merge reuse with varf
+  reuse = reuse.merge(varf)
   alt_num = reuse.shape[0]
   
   ### !!! IMPORTANT: Find the therapy range
@@ -136,36 +140,39 @@ def drug_repurpose(somatic_anno, germline_anno, race, disease_id, db, cursor):
   associated_therapy = []
   if reuse.empty == False:
     column_names = pymysql_cursor("SELECT column_name FROM information_schema.columns WHERE table_schema='OT' AND table_name='TherapyDetail';")
-    reuse_names = reuse.columns.to_list()
-    column_names.extend(reuse_names)
+    # reuse_names = reuse.columns.to_list()
+    # column_names.extend(reuse_names)
+    column_names = ['POID'] + column_names
+    
     for index, row in reuse.iterrows():
       # Find all variants corresponding to each gene
-      reuse.loc[index, 'User_Alteration'] = str(biomarker_summary[biomarker_summary.Gene == row.Gene].Alteration.to_list())
-      reuse.loc[index, 'Population_AF'] = str(biomarker_summary[biomarker_summary.Gene == row.Gene].Population_AF.to_list())
       ass_mg_id = get_metaid(row.Associated_Gene, "gene")[0]
       reuse.loc[index, 'GeneID'] = ass_mg_id
     
       ### Searching by row: Drug and therapy data
-      if row.Source == 'Somatic':
+      if row.Origin == 'Somatic':
         therapy_detail = cursor.execute('SELECT * FROM TherapyDetail WHERE SourceID != 4 AND OriginID IN (SELECT ID FROM OriginDic WHERE Name REGEXP "Somatic" OR Name =  "Unknown") AND ID IN (%s) AND ID IN \
           (SELECT DetailID FROM TherapyHasDetail WHERE TherapyID IN \
             (SELECT TherapyID FROM TherapyTarget WHERE GeneID = "%s"));' % (",".join([str(i) for i in detail_ids]), ass_mg_id))
-      elif row.Source == 'Germline':
+      elif row.Origin == 'Germline':
         therapy_detail = cursor.execute('SELECT * FROM TherapyDetail WHERE SourceID != 4 AND OriginID IN (SELECT ID FROM OriginDic WHERE Name REGEXP "Germline" OR Name =  "Unknown") AND ID IN (%s) AND ID IN \
           (SELECT DetailID FROM TherapyHasDetail WHERE TherapyID IN \
             (SELECT TherapyID FROM TherapyTarget WHERE GeneID = "%s"));' % (",".join([str(i) for i in detail_ids]), ass_mg_id))
       therapy_detail = cursor.fetchall()
       for item in therapy_detail:
-        item = list(item)
-        item.extend(row.to_list())
+        item = [row.POID] + list(item)
+        # item.extend(row.to_list())
         associated_therapy.append(item)
     
     # Transfer to dataframe
     repurposing_therapy = pd.DataFrame(associated_therapy, columns=column_names).drop_duplicates()
     print("There are %s repurposing therapies." % repurposing_therapy.Therapy.drop_duplicates().shape[0])
   else:
-    repurposing_therapy = pd.DataFrame()
+    repurposing_therapy = pd.DataFrame(columns=column_names)
     print("There are 0 repurposing therapies.")
   
-  return((biomarker_summary, repurposing_therapy, alt_num))
+  # Filter indirect biomarker
+  indirect_biomarker = varf[varf.POID.isin(repurposing_therapy.POID.drop_duplicates())]
+  
+  return((repurposing_therapy, alt_num, indirect_biomarker))
 

@@ -12,7 +12,7 @@ def concat_func(x):
   return pd.Series({'Level_Details':'|'.join(x['Level_Details'].unique()), 'Guidelines': '|'.join(x['Guidelines'].unique())})
 
 
-def summary_report(merged_therapy, repurposing_therapy, chemotherapy, biomarker_summary, disease_id, db, cursor):
+def summary_report(merged_therapy, repurposing_therapy, chemotherapy, snpindel_biomarker, cnv_biomarker, fusion_biomarker, rna_biomarker, indirect_biomarker, multi_var, single_var, disease_id, db, cursor):
   
   if not merged_therapy.empty:
     merged_therapy = merged_therapy[merged_therapy.NormLevelID != 31]
@@ -41,13 +41,6 @@ def summary_report(merged_therapy, repurposing_therapy, chemotherapy, biomarker_
       if type(drugid) != list:
         drugid = [drugid]
     
-    # Drugs = pymysql_cursor('SELECT DISTINCT NormDrug FROM DrugDisplay WHERE Drug = "%s";' % row.Therapy)
-    # if Drugs == None and DrugSetID != [None]:
-    #   Drugs = pymysql_cursor('SELECT DISTINCT NormDrug FROM DrugDisplay WHERE DrugSetID IN (%s);' % (",".join([str(i) for i in DrugSetID])))
-    #   if type(Drugs) == list:
-    #     Drugs = "%".join(Drugs)
-    # if Drugs == None:
-    #   Drugs = row.Therapy
     Drugs = pymysql_cursor('SELECT Therapy FROM MetaLite.Therapy WHERE ID = "%s";' % row.NormTherapyID)
     
     drug_range = ",".join([str(i) for i in drugid])
@@ -64,6 +57,13 @@ def summary_report(merged_therapy, repurposing_therapy, chemotherapy, biomarker_
       Guidelines["NCCN"] = list(set(multi_nccn))
     
     Response = row.Response
+    if Response in ['No Sensitivity', 'May Decrease Sensitivity', 'Reduced Sensitivity', 'Overcomes acquired resistance']:
+      continue
+    elif 'Sensitivity' in Response:
+      Response = 'Sensitivity'
+    elif 'Resistance' in Response:
+      Response = 'Resistance'
+    
     LevelDetails = {}
     ### Raw Level
     RawLevel = pymysql_cursor('SELECT Name FROM EvidenceLevelDic WHERE ID = "%s";' % row.RawLevelID)
@@ -103,19 +103,23 @@ def summary_report(merged_therapy, repurposing_therapy, chemotherapy, biomarker_
     URL = row.URL
     Details.append(URL)
     LevelDetails[SourceDB] = Details
+    
+    ### Biomarker Detail
+    Small_Variant = snpindel_biomarker[snpindel_biomarker.Gene == row.Gene].to_dict('records')
+    CNV = cnv_biomarker[cnv_biomarker.Gene == row.Gene].to_dict('records')
+    fusion_f = fusion_biomarker[(fusion_biomarker.gene1 == row.Gene) | (fusion_biomarker.gene2 == row.Gene)]
+    fusion_f.insert(0, 'Gene_Pair', fusion_f.gene1 + '::' + fusion_f.gene2)
+    Fusion = fusion_f.drop(columns=['gene1', 'gene2']).to_dict('records')
+    Expression = rna_biomarker[rna_biomarker.Gene == row.Gene].to_dict('records')
+    
     ## Add result
-    direct_evidence.append([row.Gene, row.Variant, row.Source, Drugs, Response, Level, str(LevelDetails), str(Guidelines)])
+    direct_evidence.append([row.Gene, row.Variant, row.Source, Drugs, Response, Level, str(LevelDetails), str(Guidelines), str(Small_Variant), str(CNV), str(Fusion), str(Expression)])
   
+  DE = pd.DataFrame(direct_evidence, columns=['Gene', 'Alteration', 'Source', 'Drugs', 'Response', 'Level', 'Level_Details', 'Guidelines', 'Small_Variant', 'CNV', 'Fusion', 'Expression'], dtype='object').drop_duplicates()
 
-  DE = pd.DataFrame(direct_evidence, columns=['Gene', 'Alteration', 'Source', 'Drugs', 'Response', 'Level', 'Level_Details', 'Guidelines'], dtype='object').drop_duplicates()
-  if direct_evidence != []:
-    DE = DE.drop(['Drugs'], axis=1).join(DE['Drugs'].str.split('%', expand=True).stack().reset_index(level=1, drop=True).rename('Drugs')).drop_duplicates().reset_index(drop = True)
-  
-  ## 合并重复项
-  # 1. 先排序
+  ### Transform and filter
   DE = DE.sort_values('Level').reset_index(drop=True)
-  # 2. 找到重复行，合并Level Details
-  DE_F = DE.groupby(['Gene', 'Alteration', 'Source', 'Drugs', 'Response', 'Level']).apply(concat_func).reset_index()
+  DE_F = DE.groupby(['Gene', 'Alteration', 'Source', 'Drugs', 'Response', 'Level', 'Small_Variant', 'CNV', 'Fusion', 'Expression']).apply(concat_func).reset_index()
   for index, row in DE_F.iterrows():
     DE_F.loc[index, 'Level_Details'] = str(row.Level_Details.split('|'))
     DE_F.loc[index, 'Guidelines'] = str(row.Guidelines.split('|'))
@@ -123,7 +127,7 @@ def summary_report(merged_therapy, repurposing_therapy, chemotherapy, biomarker_
   if DE_F.empty is False:
     DE_F = DE_F.sort_values('Level').reset_index(drop=True)
   
-  ## JSON
+  ### JSON
   direct_json = DE_F.to_dict(orient='records')
   for item in direct_json:
     Level_Details = {}
@@ -133,7 +137,10 @@ def summary_report(merged_therapy, repurposing_therapy, chemotherapy, biomarker_
     Guidelines = {}
     for guide in eval(item['Guidelines']):
       Guidelines.update(eval(guide))
-    item['Guidelines'] = Guidelines
+    item['Small_Variant'] = eval(Small_Variant)
+    item['CNV'] = eval(CNV)
+    item['Fusion'] = eval(Fusion)
+    item['Expression'] = eval(Expression)
   
 
   ################################## Part 2: indirected drug recommendation
@@ -182,6 +189,13 @@ def summary_report(merged_therapy, repurposing_therapy, chemotherapy, biomarker_
       Guidelines["NCCN"] = list(set(multi_nccn))
     
     Response = row.Response
+    if Response in ['No Sensitivity', 'May Decrease Sensitivity', 'Reduced Sensitivity', 'Overcomes acquired resistance']:
+      continue
+    elif 'Sensitivity' in Response:
+      Response = 'Sensitivity'
+    elif 'Resistance' in Response:
+      Response = 'Resistance'
+    
     LevelDetails = {}
     ### Level
     Level = 'E'
@@ -210,18 +224,17 @@ def summary_report(merged_therapy, repurposing_therapy, chemotherapy, biomarker_
     URL = row.URL
     Details.append(URL)
     LevelDetails[SourceDB] = Details
-    ## Add result
-    indirect_evidence.append([row.Gene, row.Source, row.Associated_Gene, row.Pathway, row.PPI_Score, Drugs, Response, Level, str(LevelDetails), str(Guidelines)])
-  
-  INDE = pd.DataFrame(indirect_evidence, columns=['Gene', 'Source', 'Associated_Gene', 'Pathway', 'PPI_Score', 'Drugs', 'Response', 'Level', 'Level_Details', 'Guidelines'], dtype='object').drop_duplicates()
-  if indirect_evidence != []:
-    INDE = INDE.drop(['Drugs'], axis=1).join(INDE['Drugs'].str.split('%', expand=True).stack().reset_index(level=1, drop=True).rename('Drugs')).drop_duplicates().reset_index(drop = True)
 
-  # 删除部分重复行
-  # 1. 先排序
+    ### Biomarker Detail
+    Small_Variant = indirect_biomarker[indirect_biomarker.Gene == row.Gene].to_dict('records')
+    
+    ## Add result
+    indirect_evidence.append([row.Gene, row.Source, row.Associated_Gene, row.Pathway, row.PPI_Score, Drugs, Response, Level, str(LevelDetails), str(Guidelines), str(Small_Variant)])
+  
+  ### Transform and filter
+  INDE = pd.DataFrame(indirect_evidence, columns=['Gene', 'Source', 'Associated_Gene', 'Pathway', 'PPI_Score', 'Drugs', 'Response', 'Level', 'Level_Details', 'Guidelines', 'Small_Variant'], dtype='object').drop_duplicates()
   INDE = INDE.sort_values('Level').reset_index(drop=True)
-  # 2. 找到重复行，合并Level Details
-  INDE_F = INDE.groupby(['Gene', 'Source', 'Associated_Gene', 'Pathway', 'PPI_Score', 'Drugs', 'Response', 'Level']).apply(concat_func).reset_index()
+  INDE_F = INDE.groupby(['Gene', 'Source', 'Associated_Gene', 'Pathway', 'PPI_Score', 'Drugs', 'Response', 'Level', 'Small_Variant']).apply(concat_func).reset_index()
   for index, row in INDE_F.iterrows():
     INDE_F.loc[index, 'Level_Details'] = str(row.Level_Details.split('|'))
     INDE_F.loc[index, 'Guidelines'] = str(row.Guidelines.split('|'))
@@ -229,7 +242,7 @@ def summary_report(merged_therapy, repurposing_therapy, chemotherapy, biomarker_
   if INDE_F.empty is False:
     INDE_F = INDE_F.sort_values('Guidelines').reset_index(drop=True)
   
-  ## JSON
+  ### JSON
   indirect_json = INDE_F.to_dict(orient='records')
   for item in indirect_json:
     Level_Details = {}
@@ -240,7 +253,8 @@ def summary_report(merged_therapy, repurposing_therapy, chemotherapy, biomarker_
     for guide in eval(item['Guidelines']):
       Guidelines.update(eval(guide))
     item['Guidelines'] = Guidelines
-   
+    item['Small_Variant'] = eval(Small_Variant)
+  
   
   ################################## Part 3: drug_response
   print("Part 3: drug_response")
@@ -258,7 +272,7 @@ def summary_report(merged_therapy, repurposing_therapy, chemotherapy, biomarker_
     ### Guidelines
     Guidelines = {}
     Guidelines[row.Source] = [row.Recommendation]
-    Allele = row.Diplotype
+    Diplotype = row.Variant + ' ' + row.Diplotype; Diplotype = Diplotype.strip()
     Category = row.PhenotypeCategory
     Response = row.PAnnoPhenotype
     if type(Response) != str:
@@ -285,16 +299,21 @@ def summary_report(merged_therapy, repurposing_therapy, chemotherapy, biomarker_
     URL = "https://www.pharmgkb.org/clinicalAnnotation/%s" % row.CAID
     Details.append(URL)
     LevelDetails[SourceDB] = Details
+    
+    # Biomarker Detail
+    Multi_Variant = multi_var[multi_var.Gene == Gene].to_dict('records')
+    Single_Variant = single_var[single_var.Gene == Gene].to_dict('records')
+    
     ## Add result
-    drug_response.append([Gene, row.Variant, Allele, 'Germline', Drugs, Category, Response, Level, str(LevelDetails), str(Guidelines)])
+    drug_response.append([Gene, Diplotype, 'Germline', Drugs, Category, Response, Level, str(LevelDetails), str(Guidelines), str(Multi_Variant), str(Single_Variant)])
   
-  DR = pd.DataFrame(drug_response, columns=['Gene', 'Alteration', 'Allele', 'Source', 'Drugs', 'Category', 'Response', 'Level', 'Level_Details', 'Guidelines'], dtype='object').drop_duplicates()
+  DR = pd.DataFrame(drug_response, columns=['Gene', 'Diplotype', 'Source', 'Drugs', 'Category', 'Response', 'Level', 'Level_Details', 'Guidelines', 'Multi_Variant', 'Single_Variant'], dtype='object').drop_duplicates()
   DR = DR[DR.Gene != '-']
   ## 如果将Level Details和Guidelines合并
   # 1. 先排序
   DR = DR.sort_values('Level').reset_index(drop=True)
   # 2. 找到重复行，合并Level Details
-  DR_F = DR.groupby(['Gene', 'Alteration', 'Allele', 'Source', 'Drugs', 'Category', 'Response', 'Level']).apply(concat_func).reset_index()
+  DR_F = DR.groupby(['Gene', 'Diplotype', 'Source', 'Drugs', 'Category', 'Response', 'Level', 'Multi_Variant', 'Single_Variant']).apply(concat_func).reset_index()
   for index, row in DR_F.iterrows():
     DR_F.loc[index, 'Level_Details'] = str(row.Level_Details.split('|'))
     DR_F.loc[index, 'Guidelines'] = str(row.Guidelines.split('|'))
@@ -313,27 +332,20 @@ def summary_report(merged_therapy, repurposing_therapy, chemotherapy, biomarker_
     for guide in eval(item['Guidelines']):
       Guidelines.update(eval(guide))
     item['Guidelines'] = Guidelines
-  
-
-  ################################## Part 4: Biomarker Summary
-  print("Part 4: Biomarker Summary")
-  ### We will display therapy related genes' variation
-  if biomarker_summary.empty is False:
-    biomarker_summary['Population_AF'] = biomarker_summary['Population_AF'].replace(np.nan, '.').astype(str)
-  biomarker_json = biomarker_summary.to_dict(orient='records')
+    item['Multi_Variant'] = eval(Multi_Variant)
+    item['Single_Variant'] = eval(Single_Variant)
   
   
-  ################################## Part 5: Generating a single file
-  print("Part 5: Detail Report")
+  ################################## Part 4: Generating a single file
+  print("Part 4: Detail Report")
   detail = {
     "Direct_Evidence": direct_json,
     "Indirect_Evidence": indirect_json,
     "Drug_Response": response_json,
-    "Biomarker": biomarker_json,
   }
   
-  ################################## Part 6: Summary section
-  print("Part 6: Summary")
+  ################################## Part 5: Summary section
+  print("Part 5: Summary")
   DE.insert(0, 'Class', 'direct')
   INDE.insert(0, 'Class', 'indirect')
   DR.insert(0, 'Class', 'response')

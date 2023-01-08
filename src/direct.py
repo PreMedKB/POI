@@ -7,7 +7,7 @@ import numpy as np
 from src.functions import pymysql_cursor, search_set, search_snpindel, search_others, parse_aachange
 
 
-def drug_direct(tissue, disease, assembly, somatic_anno, germline_anno, cnv, fusion, tmb, msi, rna_exp, db, cursor):
+def drug_direct(tissue, disease, assembly, race, somatic_anno, germline_anno, cnv, fusion, tmb, msi, rna_exp, db, cursor):
   # Decipher the input disease, we also need to find the tissue info through input
   global detected_var
   detected_var = []
@@ -15,38 +15,48 @@ def drug_direct(tissue, disease, assembly, somatic_anno, germline_anno, cnv, fus
   # Find therapies separately
   if not somatic_anno.empty:
     print('Processing Somatic Annotated VCF or TXT...')
-    somatic_res = parse_txt(somatic_anno, assembly, 'Somatic')
+    somatic_res = parse_txt(somatic_anno, assembly, 'Somatic', race)
     somatic_therapy = somatic_res[0]
     detected_var.extend(somatic_res[1])
+    somatic_biomarker = somatic_res[2]
   else:
     somatic_therapy = pd.DataFrame()
+    somatic_biomarker = pd.DataFrame()
   
   if not germline_anno.empty:
     print('Processing Germline Annotated VCF or TXT...')
     # Filter by pathogenic
     germline_anno_p = germline_anno[germline_anno.CLNSIG.str.contains(r'Pathogenic|Likely_pathogenic', regex=True)]
     genelist = pymysql_cursor('SELECT DISTINCT Symbol FROM Variant WHERE ID IN (SELECT VariantID FROM Therapy WHERE ID IN (SELECT TherapyID FROM TherapyHasDetail WHERE DetailID IN (SELECT ID FROM TherapyDetail WHERE SourceID != 4 AND OriginID IN (SELECT ID FROM OriginDic WHERE Name REGEXP "Germline"))));')
-    germline_res = parse_txt(germline_anno_p, assembly, 'Germline', genelist)
+    germline_res = parse_txt(germline_anno_p, assembly, 'Germline', race, genelist)
     germline_therapy = germline_res[0]
     detected_var.extend(germline_res[1])
+    germline_biomarker = germline_res[2]
   else:
     germline_therapy = pd.DataFrame()
+    germline_biomarker = pd.DataFrame()
   
+  snpindel_biomarker = pd.concat([somatic_biomarker, germline_biomarker], axis=0)
+
   if not cnv.empty:
     print('Processing CNV...')
     cnv_res = parse_cnv(cnv, assembly)
     cnv_therapy = cnv_res[0]
     detected_var.extend(cnv_res[1])
+    cnv_biomarker = cnv_res[2]
   else:
     cnv_therapy = pd.DataFrame()
+    cnv_biomarker = pd.DataFrame()
   
   if not fusion.empty:
     print('Processing Fusion...')
     fusion_res = parse_fusion(fusion, assembly)
     fusion_therapy = fusion_res[0]
     detected_var.extend(fusion_res[1])
+    fusion_biomarker = fusion_res[2]
   else:
     fusion_therapy = pd.DataFrame()
+    fusion_biomarker = pd.DataFrame()
   
   if tmb:
     print('Processing TMB...')
@@ -69,29 +79,30 @@ def drug_direct(tissue, disease, assembly, somatic_anno, germline_anno, cnv, fus
     rna_res = parse_rna(rna_exp, tissue, disease, assembly)
     rna_therapy = rna_res[0]
     detected_var.extend(rna_res[1])
+    rna_biomarker = rna_res[2]
   else:
     rna_therapy = pd.DataFrame()
+    rna_biomarker = pd.DataFrame()
   
   # Find therapies through `Set`
   # Process the detected_var to confirm every item is unique id
   print('Deciphering multiple interrelated biomarkers...')
-  detected_var_df = pd.DataFrame(detected_var, columns=['VariantID', 'Gene', 'Alteration', 'Source']).dropna()
-  alt_num = len(detected_var)
+  detected_var_df = pd.DataFrame(detected_var, columns=['POID', 'VariantID', 'Gene', 'Alteration', 'Source']).drop_duplicates().dropna().reset_index(drop=True)
+  alt_num = detected_var_df[detected_var_df.POID != ''].POID.drop_duplicates().shape[0]
   if detected_var_df.empty is False:
-    detected_var_df = detected_var_df.drop(['VariantID'], axis=1).join(detected_var_df['VariantID'].str.split(',', expand=True).stack().reset_index(level=1, drop=True).rename('VariantID'))
+    detected_var_df = detected_var_df.drop(['VariantID'], axis=1).join(detected_var_df['VariantID'].str.split(',', expand=True).stack().reset_index(level=1, drop=True).rename('VariantID')).reset_index(drop=True)
     set_therapy = search_set(detected_var_df, assembly)
   else:
     set_therapy = pd.DataFrame()
   
-  
   ### Merge the result
   merged_therapy = pd.concat([somatic_therapy, germline_therapy, cnv_therapy, fusion_therapy, tmb_therapy, msi_therapy, rna_therapy, set_therapy], axis = 0)
-  return (merged_therapy, alt_num)
+  return (merged_therapy, alt_num, snpindel_biomarker, cnv_biomarker, fusion_biomarker, rna_biomarker)
 
 
 
 ###  Parse Input Files & Expert Therapies
-def parse_txt(anno, assembly, source, genelist=None):
+def parse_txt(anno, assembly, source, race, genelist=None):
   vcf_therapy = pd.DataFrame()
   metavariants = []
   if genelist:
@@ -99,12 +110,20 @@ def parse_txt(anno, assembly, source, genelist=None):
   else:
     anno = anno
   
+  # Add columns: POID, Function
+  anno = anno.reset_index(drop=True)
+  anno.insert(0, 'POID', ['%s.%s' % (source, str(i+1)) for i in anno.index.to_list()])
+  # ExonicFunc.refGene for splicing, intronic, UTR, etc., are all '.'.
+  anno.insert(1, 'Function', anno[['ExonicFunc.refGene']])
+  splicing_index = anno[anno['Func.refGene'].str.contains('splicing')].index
+  anno.loc[splicing_index, 'Function'] = 'splicing'
+  
   # For wildtype and whole gene deletions
   wild_type_genes = pymysql_cursor('SELECT DISTINCT Symbol FROM Variant WHERE Name LIKE "%Wildtype%";')
   wt_del = []
   for gene in wild_type_genes:
     if anno[anno['Gene.refGene'] == gene].empty:
-      wt_del.append([gene, 'Wildtype'])
+      wt_del.append([gene, 'Wildtype', ''])
   
   # Parse every single variant and find the therapies
   for index, row in anno.iterrows():
@@ -113,10 +132,11 @@ def parse_txt(anno, assembly, source, genelist=None):
     chr, pos, ref, alt = row['Chr'], row['Start'], row['Ref'], row['Alt']
     # Whole gene deletion, add it into wt_del
     if re.search('wholegene', row['AAChange.refGene']) and re.search('deletion', row['ExonicFunc.refGene']):
-      wt_del.append([gene, row['ExonicFunc.refGene']])
+      wt_del.append([gene, row['ExonicFunc.refGene'], row.POID])
     # Small variants
     else:
       nm_exon_cc_pc = parse_aachange(row['AAChange.refGene'], row['GeneDetail.refGene']) # return [] for splicing
+      fuc = row.Function
       # ClinVar
       if '|' in row['CLNSIG']:
         clinsig_match = re.compile(r'Pathogenic|Likely_pathogenic').findall(row['CLNSIG'])
@@ -126,8 +146,7 @@ def parse_txt(anno, assembly, source, genelist=None):
           clinsig = row['CLNSIG'].split('|')[0]
       else:
         clinsig = row['CLNSIG']
-      # ExonicFunc.refGene for splicing, intronic, UTR, etc., are all '.'.
-      fuc = 'splicing' if 'splicing' in row['Func.refGene'] else row['ExonicFunc.refGene']
+      
       # Split the multiple protein changes
       var_multi = []
       for i in range(0, len(nm_exon_cc_pc)):
@@ -139,27 +158,49 @@ def parse_txt(anno, assembly, source, genelist=None):
         res = search_snpindel(gene, var, source, assembly)
         therapy = res[0]
         if therapy.empty is False:
-          therapy.insert(0, 'FUSCC', "|".join([str(i) for i in var]))
+          # therapy.insert(0, 'FUSCC', "|".join([str(i) for i in var]))
+          therapy.insert(0, 'POID', row.POID)
           vcf_therapy = pd.concat([vcf_therapy, therapy], axis=0)
         if res[1]:
-          metavariants.append(res[1])
+          metavariants.append((row.POID,) + res[1])
   
   # Parse wildtypes and wholegene deletions
-  for gene, var in wt_del:
+  for gene, var, POID in wt_del:
     res = search_snpindel(gene, var, source, assembly)
     therapy = res[0]
     if therapy.empty is False:
-      therapy.insert(0, 'FUSCC', var)
+      # therapy.insert(0, 'FUSCC', var)
+      therapy.insert(0, 'POID', POID)
       vcf_therapy = pd.concat([vcf_therapy, therapy], axis=0)
     if res[1]:
-      metavariants.append(res[1])
+      metavariants.append((POID,) + res[1])
   
-  return(vcf_therapy, metavariants)
+  # Biomarker details
+  snpindel_var = pd.DataFrame(metavariants, columns=['POID', 'VariantID', 'Gene', 'Alteration', 'Source'])
+  snpindel_biomarker = anno[anno.POID.isin(snpindel_var.POID.to_list())]
+  snpindel_biomarker = pd.merge(snpindel_biomarker, snpindel_var)
+  cols = ['POID', 'Gene', 'Origin', 'Location', 'Ref>Alt', 'Transcript', 'Exon', 'Protein_Change', 'Function', 'Clinical_Significance', 'Pathogenic_Prediction', 'Population_AF']
+  if snpindel_biomarker.empty:
+    snpindel_biomarker = pd.DataFrame(columns=cols)
+  else:
+    snpindel_biomarker[['Location', 'Ref>Alt', 'Transcript', 'Exon', 'Protein_Change']] = snpindel_biomarker.Alteration.str.split(',', expand=True)
+    ref_pop = 'AF_%s' % race
+    snpindel_biomarker = snpindel_biomarker.copy().rename(columns={'Source':'Origin', 'CLNSIG':'Clinical_Significance', ref_pop: 'Population_AF'})
+    snpindel_biomarker.insert(0, 'Pathogenic_Prediction', 'Tolerated')
+    d_index = snpindel_biomarker[(snpindel_biomarker.SIFT_pred=="D")|(snpindel_biomarker.LRT_pred=="D")|(snpindel_biomarker.MutationTaster_pred=="A")|(snpindel_biomarker.MutationTaster_pred=="D")|(snpindel_biomarker.MutationAssessor_pred=="H")|(snpindel_biomarker.MutationAssessor_pred=="M")|(snpindel_biomarker.FATHMM_pred=="D")|(snpindel_biomarker.PROVEAN_pred=="D")|(snpindel_biomarker.MetaSVM_pred=="D")|(snpindel_biomarker.MetaLR_pred=="D")].index
+    snpindel_biomarker.loc[d_index, 'Pathogenic_Prediction'] = 'Deleterious'
+    snpindel_biomarker = snpindel_biomarker[cols]
+    
+  return(vcf_therapy, metavariants, snpindel_biomarker)
 
 
 def parse_cnv(cnv, assembly):
   cnv_therapy = pd.DataFrame()
   metavariants = []
+  
+  cnv = cnv.reset_index(drop=True)
+  cnv.insert(0, 'POID', ['%s.%s' % ("CNV", str(i+1)) for i in cnv.index.to_list()])
+  
   # Row-by-row to find therapy
   for index, row in cnv.iterrows():
     # Search database get drug
@@ -168,11 +209,19 @@ def parse_cnv(cnv, assembly):
     res = search_others(gene, var, "CNV", assembly)
     therapy = res[0]
     if therapy.empty is False:
-      if len(row) == 3:
-        therapy.insert(0, 'FUSCC', row.copy_number)
+      # if len(row) == 3:
+      #   therapy.insert(0, 'FUSCC', row.copy_number)
+      therapy.insert(0, 'POID', row.POID)
       cnv_therapy = pd.concat([cnv_therapy, therapy], axis=0)
     if res[1]:
-      metavariants.append(res[1])
+      metavariants.append((row.POID,) + res[1])
+  
+  # Biomarker details
+  cnv_var = pd.DataFrame(metavariants, columns=['POID', 'VariantID', 'Gene', 'Alteration', 'Source'])
+  cnv = cnv.rename(columns = {'symbol':'Gene', 'estimation':'CNV State'})
+  cnv_biomarker = pd.concat([cnv, pd.DataFrame(columns=['Copy_Change', 'LOH_State', 'Cytoband', 'Location'])], axis=1)
+  cnv_biomarker = cnv_biomarker[cnv_biomarker.POID.isin(cnv_var.POID.to_list())]
+  cnv_biomarker = cnv_biomarker[['POID', 'Gene', 'Copy_Change', 'CNV_State', 'LOH_State', 'Cytoband', 'Location']]
   
   return(cnv_therapy, metavariants)
 
@@ -180,6 +229,10 @@ def parse_cnv(cnv, assembly):
 def parse_fusion(fusion, assembly):
   fusion_therapy = pd.DataFrame()
   metavariants = []
+  
+  fusion = fusion.reset_index(drop=True)
+  fusion.insert(0, 'POID', ['%s.%s' % ("Fusion", str(i+1)) for i in fusion.index.to_list()])
+  
   # Row-by-row to find therapy
   for index, row in fusion.iterrows():
     # Search database get drug
@@ -188,11 +241,18 @@ def parse_fusion(fusion, assembly):
     res = search_others(gene, var, "Fusion", assembly)
     therapy = res[0]
     if therapy.empty is False:
+      therapy.insert(0, 'POID', row.POID)
       fusion_therapy = pd.concat([fusion_therapy, therapy], axis=0)
     if res[1]:
-      metavariants.append(res[1])
+      metavariants.append((row.POID,) + res[1])
   
-  return(fusion_therapy, metavariants)
+  # Biomarker details
+  fusion_var = pd.DataFrame(metavariants, columns=['POID', 'VariantID', 'Gene', 'Alteration', 'Source'])
+  fusion_biomarker = pd.concat([fusion, pd.DataFrame(columns=['Breakpoint', 'Event_Type', 'Sample', 'Cytogenic_Description'])], axis=1)
+  fusion_biomarker = fusion_biomarker[fusion_biomarker.POID.isin(fusion_var.POID.to_list())]
+  fusion_biomarker = fusion_biomarker[['POID', 'gene1', 'gene2', 'Breakpoint', 'Event_Type', 'Sample', 'Cytogenic_Description']]
+  
+  return(fusion_therapy, metavariants, fusion_biomarker)
 
 
 def parse_tmb_msi(tmb_or_msi, assembly):
@@ -201,14 +261,16 @@ def parse_tmb_msi(tmb_or_msi, assembly):
   var_type = tmb_or_msi.split('-')[0]
   res = search_others(gene, tmb_or_msi, var_type, assembly)
   therapy = res[0]
-  metavariants.append(res[1])
+  therapy.insert(0, 'POID', tmb_or_msi)
+  metavariants.append((tmb_or_msi,) + res[1])
   
   return(therapy, metavariants)
 
 
 def parse_rna(rna_exp, tissue, disease, assembly):
-  rna_therapy = pd.DataFrame()
-  metavariants = []
+  rna_exp = rna_exp.reset_index(drop=True)
+  rna_exp.insert(0, 'POID', ['%s.%s' % ("RNA", str(i+1)) for i in rna_exp.index.to_list()])
+  
   # Preprocessing.
   # Import gene length information
   # Transform the format of expression: count2CPM
@@ -251,7 +313,11 @@ def parse_rna(rna_exp, tissue, disease, assembly):
   # regard those overespression genes as expression genes
   exp = over_exp
   biomarkers_final = pd.concat([biomarkers, exp], axis=0)
+  
   # Find therapies
+  rna_therapy = pd.DataFrame()
+  metavariants = []
+  
   biomarkers_final = biomarkers_final[biomarkers_final.gene_symbol.isin(rna_targets)].reset_index(drop=True)
   for index, row in biomarkers_final.iterrows():
     gene = row.gene_symbol
@@ -259,8 +325,16 @@ def parse_rna(rna_exp, tissue, disease, assembly):
     res = search_others(gene, var, "RNA", assembly)
     therapy = res[0]
     if therapy.empty is False:
+      therapy.insert(0, 'POID', row.POID)
       rna_therapy = pd.concat([rna_therapy, therapy], axis=0)
     if res[1]:
-      metavariants.append(res[1])
+      metavariants.append((row.POID,) + res[1])
   
-  return(rna_therapy, metavariants)
+  # Biomarker details
+  rna_var = pd.DataFrame(metavariants, columns=['POID', 'VariantID', 'Gene', 'Alteration', 'Source'])
+  biomarkers_final = biomarkers_final.rename(columns={'gene_symbol':'Gene', 'CPM_TT':'Tumor_CPM', 'CPM_TP':'Normal_CPM', 'logfc':'log2FC'})
+  rna_biomarker = pd.merge(rna_var, biomarkers_final)
+  rna_biomarker.insert(0, 'Percentile', "78.5% (785/1000)")
+  rna_biomarker = rna_biomarker[['POID', 'Gene', 'Alteration', 'Tumor_CPM', 'Normal_CPM', 'log2FC', 'Percentile']]
+  
+  return(rna_therapy, metavariants, rna_biomarker)

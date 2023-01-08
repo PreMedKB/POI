@@ -320,13 +320,18 @@ def search_snpindel(gene, var, source, assembly):
     if type(var) is str:
       Alteration = var
     else:
-      chrom = "%s:%s:%s:%s" % (chr, pos, ref, '/'.join(['%s' % a for a in alt]))
+      chrom = "%s:%s" % (chr, pos)
+      refalt = "%s>%s" % (ref, '/'.join(['%s' % a for a in alt]))
       if pc != []:
-        Alteration = ",".join([chrom, cc, pc])
-      elif cc != []:
-        Alteration = ",".join([chrom, cc])
+        Alteration = ",".join([chrom, refalt, nm, exon, pc])
+      elif nm != [] and exon != []:
+        Alteration = ",".join([chrom, refalt, nm, exon])
+      elif nm != []:
+        Alteration = ",".join([chrom, refalt, nm])
+      elif exon != []:
+        Alteration = ",".join([chrom, refalt, exon])
       else:
-        Alteration = ",".join([chrom])
+        Alteration = ",".join([chrom, refalt])
     out_df.insert(0, 'Gene', Gene)
     out_df.insert(1, 'Variant', Alteration)
     out_df.insert(2, 'Source', source)
@@ -383,6 +388,8 @@ def search_others(gene, var, var_type, assembly):
     else:
       var = "Non Amplification"
     mvar_ids = pymysql_cursor('SELECT ID FROM Variant WHERE Name = "%s" AND GeneID IN ("%s") AND AssemblyID IN (%s);' % (var, mgid_range, assembly_range))
+    if var == "Non Amplification":
+      var = "Neutral"
 
   # Gene Fusions
   elif var_type == "Fusion":
@@ -499,11 +506,11 @@ def search_set(detected_var_df, assembly):
             flag = 1
       # Final judging
       if flag == 1:
-        varset_ids.append([SetID, row.Gene, row.Alteration, row.Source])
+        varset_ids.append([SetID, row.Gene, row.Alteration, row.Source, row.POID])
   
   ## Generate var_range for searching Therapy
   column_names = ['ID', 'SourceID', 'EntryID', 'Support', 'Alteration', 'TumorType', 'Therapy', 'Allele', 'Response', 'URL', 'OriginID', 'RawLevelID', 'NormLevelID', 'NormTherapyID']
-  final_df = pd.DataFrame()
+  set_therapy = pd.DataFrame()
   for item in varset_ids:
     if item[3] == 'Germline':
       # Just one record is germline alteration in PreMedKB-POI v1.0
@@ -518,10 +525,11 @@ def search_set(detected_var_df, assembly):
     out_df.insert(0, 'Gene', item[1])
     out_df.insert(1, 'Variant', item[2])
     out_df.insert(2, 'Source', item[3])
-    final_df = pd.concat([final_df, out_df], axis=0)
+    out_df.insert(0, 'POID', item[4])
+    set_therapy = pd.concat([set_therapy, out_df], axis=0)
   
   # Output
-  return(final_df)
+  return(set_therapy)
 
 
 

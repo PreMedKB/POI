@@ -107,16 +107,13 @@ def annotation(dic_diplotype, dic_rs2gt, hla_subtypes):
   ###--------- Section 1: Summary ---------###
   avoid_drug.sort(); caution_drug.sort(); routine_drug.sort()
   summary = {'Avoid': avoid_drug, 'Caution': caution_drug, 'Routine': routine_drug}
+  
   ###--------- Section 2: Prescribing Info ---------###
   detected_allele.extend(detected_hla)
   prescribing_info = pd.DataFrame(detected_allele, columns=['Gene', 'Variant', 'Diplotype', 'Phenotype']).drop_duplicates().merge(mg.drop(columns=['Phenotype']), on=['Gene'])
   prescribing_info = prescribing_info[['Drug', 'Gene', 'Variant', 'Diplotype', 'Phenotype', 'Summary', 'Recommendation', 'Source', 'PAID', 'Avoid', 'Alternate', 'Dosing']].sort_values(by=['Drug'])
-  ###--------- Section 3: Diplotype Detail ---------###
-  # Gene list: 53 genes, contains rs12777823 which does not has gene symbol
-  # gene_list = cursor.execute("SELECT DISTINCT Gene FROM ClinAnn WHERE EvidenceLevel IN ('1A', '1B', '2A', '2B') OR Gene IN (SELECT DISTINCT Gene FROM GuidelineMerge);")
-  # gene_list = cursor.fetchall()
-  # single = ["CFTR", "SLCO1B1", "-", "VKORC1", "UGT1A6", "CYP2C19", "CYP2A6", "CYP2B6", "CYP2C8", "CYP2C9", "MTHFR", "CYP3A4", "TPMT", "CYP3A5", "ABCG2", "ALDH2", "UGT1A1", "NUDT15", "CYP2D6", "G6PD", "CES1", "APOE", "DPYD", "IFNL3", "IFNL4", "F5", "CHRNA5", "RYR1", "ACE", "SLC28A3", "CACNA1S", "CYP4F2", "XRCC1", "TNF", "KIF6", "ADRB2", "ATIC", "ADD1", "EGFR", "XPNPEP2", "MT-RNR1", "MT-ND1", "ITPA", "FCGR3A", "RARG", "SCN1A", "SLC19A1", "NAT2", "HLA-A", "HLA-B", "HLA-C", "HLA-DRB1", "HLA-DPB1"]
   
+  ###--------- Section 3: Diplotype Detail ---------###
   ## MultiVar
   multi = ["CACNA1S", "CFTR", "CYP2B6", "CYP2C8", "CYP2C9", "CYP2C19", "CYP2D6", "CYP3A4", "CYP3A5", "CYP4F2", "DPYD", "NUDT15", "RYR1", "SLCO1B1", "TPMT", "UGT1A1"]
   multi_df = []
@@ -127,7 +124,7 @@ def annotation(dic_diplotype, dic_rs2gt, hla_subtypes):
       position = str(pos_res[0]) + ':' + str(pos_res[1])
       multi_df.append([gene, dic_diplotype[gene]['step2_res'], position, pos_res[4], pos_res[5], pos_res[6], pos_res[7]])
   
-  multi_var = pd.DataFrame(multi_df, columns=['Gene', 'Diplotype', 'Position', 'Variant', 'Effect on Protein', 'Definition of Alleles', 'Detected Alleles'])
+  multi_var = pd.DataFrame(multi_df, columns=['Gene', 'Diplotype', 'Position', 'Variant', 'Effect on Protein', 'Definition of Alleles', 'Variant Call'])
   
   ## SingleVar
   # 1. HLA
@@ -149,20 +146,20 @@ def annotation(dic_diplotype, dic_rs2gt, hla_subtypes):
       phenotype = '-'
       detected = 'Missing'
     detected_hla.append([gene, var, detected, phenotype])
-  detected_hla_df = pd.DataFrame(detected_hla, columns=['Gene', 'Variant', 'Detected Alleles', 'Phenotype']).drop(columns=['Phenotype'])
+  detected_hla_df = pd.DataFrame(detected_hla, columns=['Gene', 'Variant', 'Variant Call', 'Phenotype']).drop(columns=['Phenotype'])
   
   # 1. SNP/Indel
-  rsid_anno = cursor.execute('SELECT Gene, Variant FROM ClinAnn WHERE EvidenceLevel != 3 AND Variant LIKE "rs%";')
+  rsid_anno = cursor.execute('SELECT DISTINCT Gene, Variant FROM ClinAnn WHERE EvidenceLevel != 3 AND Variant LIKE "rs%" AND (Gene != "IFNL3" OR Variant != "rs12979860");')
   rsid_anno = cursor.fetchall()
   rsid_anno_df = pd.DataFrame(rsid_anno, columns = ['Gene', 'Variant'])
   rsid_guide_df = rule_df[rule_df.Variant.str.startswith('rs')][['Gene', 'Variant']]
   rsid_df = pd.concat([rsid_anno_df, rsid_guide_df], axis = 0).drop_duplicates().reset_index(drop = True)
-  rsid_df.insert(2, 'Detected Alleles', 'Missing')
+  rsid_df.insert(2, 'Variant Call', 'Missing')
   for index, row in rsid_df.iterrows():
     rsid = row.Variant
     if row.Variant in dic_rs2gt.keys():
       allele1 = dic_rs2gt[rsid][0]; allele2 = dic_rs2gt[rsid][1]
-      row['Detected Alleles'] = '%s/%s' % (allele1, allele2)
+      row['Variant Call'] = '%s/%s' % (allele1, allele2)
     rsid_df.iloc[index] = row
   
   single_var = pd.concat([rsid_df, detected_hla_df], axis = 0).drop_duplicates().sort_values(by=['Gene', 'Variant'])
@@ -174,20 +171,24 @@ def annotation(dic_diplotype, dic_rs2gt, hla_subtypes):
   ann_df = pd.DataFrame(ann, columns=['ID', 'CAID', 'Gene', 'Variant', 'Allele1', 'Allele2', 'Annotation1', 'Annotation2', 'Function1', 'Function2', 'Score1', 'Score2', 'CPICPhenotype', 'PAnnoPhenotype', 'Drug', 'Phenotypes', 'EvidenceLevel', 'LevelOverride', 'LevelModifier', 'Score', 'PMIDCount', 'EvidenceCount', 'Specialty', 'PhenotypeCategory'])
   ann_df.PhenotypeCategory = ann_df.PhenotypeCategory.replace('Metabolism/PK', 'Metabolism')
   
+  # 0. Filter rs12979860 (IFNL3 and IFNL4)
+  rm_index = ann_df[(ann_df.Variant == 'rs12979860') & (ann_df.Gene == 'IFNL3')].ID.to_list()
+  ann_df = ann_df[ann_df.ID.isin(rm_index) == False]
+  
   # 1. Filter by variant
   ann_df_retain = pd.DataFrame()
   for index, row in single_var.iterrows():
-    if row['Detected Alleles'] != 'Missing':
+    if row['Variant Call'] != 'Missing':
       if row['Variant'].startswith('rs'):
-        allele1 = row['Detected Alleles'].split('/')[0]
-        allele2 = row['Detected Alleles'].split('/')[1]
+        allele1 = row['Variant Call'].split('/')[0]
+        allele2 = row['Variant Call'].split('/')[1]
         res = ann_df[(ann_df.Gene == row.Gene) & (ann_df.Variant == row.Variant) & (((ann_df.Allele1 == allele1) & (ann_df.Allele2 == allele2)) | ((ann_df.Allele1 == allele2) & (ann_df.Allele2 == allele1)))]
         res.insert(0, 'VariantNew', row['Variant'])
-        res.insert(1, 'Diplotype', row['Detected Alleles'])
-      elif row['Detected Alleles'] != 'Zero copy':
+        res.insert(1, 'Diplotype', row['Variant Call'])
+      elif row['Variant Call'] != 'Zero copy':
         res = ann_df[(ann_df.Gene == row.Gene) & ((ann_df.Allele1 == row.Variant) | (ann_df.Allele2 == row.Variant))]
         res.insert(0, 'VariantNew', row['Variant'])
-        res.insert(1, 'Diplotype', row['Detected Alleles'])
+        res.insert(1, 'Diplotype', row['Variant Call'])
       ann_df_retain = pd.concat([ann_df_retain, res])
   
   for index, row in multi_var[['Gene', 'Diplotype']].drop_duplicates().iterrows():
@@ -205,8 +206,8 @@ def annotation(dic_diplotype, dic_rs2gt, hla_subtypes):
   #   if ann_df_retain[ann_df_retain.Drug == drug].empty:
   #     print(drug)
   
-
   ###--------- Section 4: Phenotype Prediction ---------###
+  summary['NotInAnno'] = mg[mg.Drug.isin(ann_df.Drug.to_list()) == False].Drug.drop_duplicates().to_list()
   # Categorize by phenotypes and drugs
   ann_df_retain.insert(0, 'PAnnoScore', np.nan)
   for index, row in ann_df_retain.iterrows():
@@ -238,7 +239,7 @@ def annotation(dic_diplotype, dic_rs2gt, hla_subtypes):
     phenotype_predict = pd.concat([phenotype_predict, cat_pgx]).sort_values(by=['Drug'])
   
   ###--------- Section 5: Clinical Annotation ---------###
-  clinical_anno = ann_df_retain[['Drug', 'Gene', 'VariantNew', 'Diplotype', 'PhenotypeCategory', 'EvidenceLevel', 'PAnnoPhenotype', 'CAID']].rename(columns={'VariantNew': 'Variant'}).sort_values(by=['Drug'])
+  clinical_anno = ann_df_retain[['Drug', 'Gene', 'VariantNew', 'Diplotype', 'PhenotypeCategory', 'EvidenceLevel', 'PAnnoPhenotype', 'CAID']].rename(columns={'VariantNew': 'Variant'}).drop_duplicates().sort_values(by=['Drug'])
   
   cursor.close()
   conn.close()

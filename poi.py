@@ -87,7 +87,7 @@ def main():
       Input = []; alterations_num = 0
       ### Somatic VCF
       if case['SomaticVCF'] == 1:
-        Input.append("Somatic variant")
+        Input.append("somatic variant")
         for f in files:
           if re.findall('.*SomaticVCF.*', f):
             somatic_vcf = os.path.join(fp, re.findall('.*SomaticVCF.*', f)[0])
@@ -107,7 +107,7 @@ def main():
       
       ### Germline VCF
       if case['GermlineVCF'] == 1:
-        Input.append("Germline variant")
+        Input.append("germline variant")
         for f in files:
           if re.findall('.*GermlineVCF.*', f):
             germline_vcf = os.path.join(fp, re.findall('.*GermlineVCF.*', f)[0])
@@ -152,7 +152,7 @@ def main():
       
       ### Fusion txt/tsv
       if case['GeneFusion'] == 1:
-        Input.append("Gene fusion")
+        Input.append("gene fusion")
         for f in files:
           if re.findall('.*GeneFusion.*', f):
             input_fusion = os.path.join(fp, re.findall('.*GeneFusion.*', f)[0])
@@ -180,7 +180,7 @@ def main():
       
       ### RNA gene expression
       if case['TumorExp'] == 1:
-        Input.append("Expression profile")
+        Input.append("gene expression")
         tumor_exp = None; normal_exp = None
         for f in files:
           if re.findall('.*TumorExp.*', f):
@@ -223,7 +223,7 @@ def main():
         assembly_dic = {'hg38': 'GRCh38', 'hg19': 'GRCh37'}
         if assembly.startswith('hg'):
           assembly = assembly_dic[assembly]
-        (merged_therapy, alt_num) = drug_direct(tissue, disease, assembly, somatic_anno, germline_anno, cnv, fusion, tmb, msi, rna_exp, db, cursor)
+        (merged_therapy, alt_num, snpindel_biomarker, cnv_biomarker, fusion_biomarker, rna_biomarker) = drug_direct(tissue, disease, assembly, somatic_anno, germline_anno, cnv, fusion, tmb, msi, rna_exp, db, cursor)
         alterations_num = alterations_num + alt_num
         status = 1
       except Exception:
@@ -235,10 +235,10 @@ def main():
       print('INDIRECT drug recommendation (repurposing) module...')
       try:
         if not somatic_anno.empty or not germline_anno.empty:
-          (biomarker_summary, repurposing_therapy, alt_num) = drug_repurpose(somatic_anno, germline_anno, race, disease_id, db, cursor)
+          (repurposing_therapy, alt_num, indirect_biomarker) = drug_repurpose(somatic_anno, germline_anno, race, disease_id, db, cursor)
           alterations_num = alterations_num + alt_num
         else:
-          biomarker_summary = pd.DataFrame()
+          indirect_biomarker = pd.DataFrame()
           repurposing_therapy = pd.DataFrame()
         status = 1
       except Exception:
@@ -256,13 +256,16 @@ def main():
           # report(race, Summary, PrescribingInfo, MultiLocus, SingleLocus, PhenotypePrediction, ClinicalAnnotation, panno_path, token)
           chemo_summary, prescribing_info, multi_var, single_var, phenotype_predict, clinical_anno = annotation(dic_diplotype, dic_rs2gt, hla_subtypes)
           report(race, chemo_summary, prescribing_info, multi_var, single_var, phenotype_predict, clinical_anno, panno_path, token)
-          
           # Merge guidelines with clinical annotations
           chemotherapy = prescribing_info.merge(clinical_anno, how='left')
+          multi_var = multi_var.rename({'Detected Alleles':'Variant Call'})
+          single_var = single_var.rename({'Detected Alleles':'Variant Call'})
           # alterations_num = alterations_num + alt_num
         else:
           chemo_summary = {'Avoid': [], 'Caution': [], 'Routine': []}
           chemotherapy = pd.DataFrame()
+          multi_var = pd.DataFrame()
+          single_var = pd.DataFrame()
         status = 1
       except Exception:
         status = 3
@@ -272,7 +275,7 @@ def main():
     if status != 3:
       print('Reporting ...')
       try:
-        (therapy_summary, detail, therapy_num) = summary_report(merged_therapy, repurposing_therapy, chemotherapy, biomarker_summary, disease_id, db, cursor)
+        (therapy_summary, detail, therapy_num) = summary_report(merged_therapy, repurposing_therapy, chemotherapy, snpindel_biomarker, cnv_biomarker, fusion_biomarker, rna_biomarker, indirect_biomarker, multi_var, single_var, disease_id, db, cursor)
         FinalResult["Input"] = ", ".join(Input)
         FinalResult["Alterations"] = alterations_num
         FinalResult["Therapies"] = therapy_num
@@ -303,7 +306,7 @@ def main():
     #   pass
     
     # Compress the results
-    os.system('zip -r /mnt/case/%s/premedkb-poi-report.zip /mnt/case/%s/summary.json /mnt/case/%s/panno.html' % (token, token, token))
+    os.system('zip -r -j /mnt/case/%s/premedkb-poi-report.zip /mnt/case/%s/summary.json /mnt/case/%s/panno.html' % (token, token, token))
     
     
     ## Update status: 0 waiting; 1 running; 2 success; 3 failed
