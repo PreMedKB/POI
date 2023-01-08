@@ -1,0 +1,167 @@
+AKT Inhibitor
+ALK Inhibitor
+AR Inhibitor (Next Generation)
+ATR Inhibitor
+AURK Inhibitor
+CDK Inhibitor
+DNA-PKc Inhibitor
+EGFR Inhibitor (First-Generation)
+EGFR Inhibitor (Second-Generation)
+EGFR Inhibitor (Third-Generation)
+ERK Inhibitor
+EZH2 Inhibitor
+FACT Inhibitor
+FAK Inhibitor
+FAS Inhibitor
+FGFR Inhibitor
+FLT3 Inhibitor
+Gamma Secretase Inhibitor
+HDAC Inhibitor
+HSP90 Inhibitor
+HSP90 Inhibitor + Trastuzumab
+IDH1 Inhibitor
+Inhibitor
+MDM2/MDMX Inhibitor
+EGFR Inhibitor + MEK Inhibitor
+MEK Inhibitor
+BRAF Inhibitor + MEK Inhibitor
+Gemcitabine + MEK Inhibitor
+PAK Inhibitor
+PARP Inhibitor
+Chemotherapy + PARP Inhibitor
+PDGFR Inhibitor
+PIM Inhibitor
+PKc Inhibitor
+Platinum Compound
+Gemcitabine + Platinum Compound
+Platinum Compound + Taxane Compound
+Pyrimidine Antagonist
+RAF Inhibitor
+RET Inhibitor
+SiRNA Reagent for ACLY
+Spliceosome Inhibitor
+Tankyrase Inhibitor
+Taxane Compound
+Therapeutic Glucocorticoid
+Tubulin Inhibitor
+Tyrosine Kinase Inhibitor
+VEGFR Inhibitor
+2,4-pyrimidinediamine
+7-Ethyl-10-Hydroxycamptothecin
+AEW-541
+AZ-20
+KG-5
+RG-5
+Spliceostatin A
+5-Fluoro-2-Deoxycytidine + Azacitidine + Decitabine + Guadecitabine
+Anthracycline Antineoplastic Antibiotic + Tretinoin
+Arsenic Trioxide
+Arsenic Trioxide + Tretinoin
+Capecitabine
+Carboplatin
+Carboplatin + Docetaxel + Sorafenib
+Carboplatin + Paclitaxel + Sorafenib
+Buparlisib + Carboplatin + Paclitaxel
+Carboplatin + Cyclophosphamide + Topotecan
+Carboplatin + Eribulin
+Carboplatin + Paclitaxel
+Chloroquine + Pegargiminase
+Cisplatin
+Alisertib + Cisplatin
+Cisplatin + Dinaciclib
+Cisplatin + Olaparib + Prexasertib
+Cisplatin + Panobinostat
+Cisplatin + Pictilisib
+Cisplatin + Radiation Therapy
+Cisplatin + Etoposide + Mitomycin
+Cisplatin + Fluorouracil
+Cisplatin + Gemcitabine
+Cisplatin + Gemcitabine + Veliparib
+Cisplatin + Paclitaxel
+Cisplatin + Pemetrexed
+Cisplatin + Vinorelbine
+Cisplatin + Doxorubicin + Etoposide
+Cytarabine
+Cytarabine + Daunorubicin + Etoposide
+Cytarabine + Daunorubicin + Fludarabine + Imatinib + Methotrexate
+Cytarabine + Daunorubicin
+Cytoreductive Surgery + Hyperthermic Intraperitoneal Chemotherapy
+Daunorubicin
+BCL2 Inhibitor + Decitabine
+Decitabine
+Doxorubicin
+Doxorubicin + Etoposide + Paclitaxel
+Doxorubicin + Salinomycin
+Epirubicin
+Gemcitabine
+Gemcitabine + Nedaplatin
+Mitomycin
+Oxaliplatin
+Fluorouracil + Irinotecan + Levoleucovorin + Oxaliplatin
+Fluorouracil + Oxaliplatin
+Palbociclib
+PI3K Inhibitor + Palbociclib
+Fulvestrant + Palbociclib
+Aromatase Inhibitor + Palbociclib
+Letrozole + Palbociclib
+Pemetrexed
+Retaspimycin Hydrochloride
+NSC348884 + Tretinoin
+Tretinoin
+Vinblastine
+Vinorelbine
+C-646
+CHMFL-KIT-031
+DS-6501b
+EAP Protocol
+SU-11274
+UO-126
+Adjuvant Chemotherapy
+Amrubicin
+Asparaginase
+Carmustine
+FOLFOX Regimen
+Hormone Therapy
+Ibuprofen
+Idarubicin
+Iodine
+Mitomycin C
+Niacinamide
+Omacetaxine Mepesuccinate
+Picoplatin
+Tanespimycin
+Valproic Acid
+Chlorambucil
+Melphalan
+Paclitaxel
+Aspirin
+Temozolomide
+Celecoxib
+Fluorouracil
+Azathioprine
+Etoposide
+Amiloride
+Meloxicam
+Raltitrexed
+Irbesartan
+Prednisone
+Fluorouracil + Leucovorin
+Bortezomib
+Verapamil
+Metformin
+Abiraterone
+Mercaptopurine
+Lenalidomide
+Tegafur
+Anastrozole
+Peginterferon Alfa-2a
+Sulindac
+Sertraline
+Letrozole
+Irinotecan
+Exemestane
+Tamoxifen
+Fluorouracil + Irinotecan
+Docetaxel
+Thioguanine
+Methotrexate

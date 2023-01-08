@@ -14,11 +14,15 @@ def concat_func(x):
 
 def summary_report(merged_therapy, repurposing_therapy, chemotherapy, snpindel_biomarker, cnv_biomarker, fusion_biomarker, rna_biomarker, indirect_biomarker, multi_var, single_var, disease_id, db, cursor):
   
+  drug_blacklist = open('./assets/drug_blacklist.txt').read().split('\n')
+
   if not merged_therapy.empty:
     merged_therapy = merged_therapy[merged_therapy.NormLevelID != 31]
   if not repurposing_therapy.empty:
     repurposing_therapy = repurposing_therapy[repurposing_therapy.NormLevelID != 31]
   
+  alt_poids = []
+
   ################################## Part 1: directed drug recommendation
   print("Part 1: directed drug recommendation")
   direct_evidence = []
@@ -41,79 +45,80 @@ def summary_report(merged_therapy, repurposing_therapy, chemotherapy, snpindel_b
       if type(drugid) != list:
         drugid = [drugid]
     
+    # Drug display
     Drugs = pymysql_cursor('SELECT Therapy FROM MetaLite.Therapy WHERE ID = "%s";' % row.NormTherapyID)
-    
-    drug_range = ",".join([str(i) for i in drugid])
-    ### Guidelines
-    Guidelines = {}
-    NCCNDrug = cursor.execute('SELECT DISTINCT NCCNRecommendedUse, Category, Route FROM NCCNDrug.Main WHERE \
-      DrugID IN (SELECT DISTINCT DomainID FROM NCCNDrug.Domain2Meta WHERE Class = "Drug" AND MetaID IN (%s)) AND \
-        DiseaseID IN (SELECT DISTINCT DomainID FROM NCCNDrug.Domain2Meta WHERE Class = "Disease" AND MetaID IN (%s));' % (drug_range, dis_range))
-    NCCNDrug = cursor.fetchall()
-    multi_nccn = []
-    if NCCNDrug:
-      for item in NCCNDrug:
-        multi_nccn.append("Recommended Use: %s. Category: %s. Route: %s." % (item[0], item[1], item[2]))
-      Guidelines["NCCN"] = list(set(multi_nccn))
-    
-    Response = row.Response
-    if Response in ['No Sensitivity', 'May Decrease Sensitivity', 'Reduced Sensitivity', 'Overcomes acquired resistance']:
-      continue
-    elif 'Sensitivity' in Response:
-      Response = 'Sensitivity'
-    elif 'Resistance' in Response:
-      Response = 'Resistance'
-    
-    LevelDetails = {}
-    ### Raw Level
-    RawLevel = pymysql_cursor('SELECT Name FROM EvidenceLevelDic WHERE ID = "%s";' % row.RawLevelID)
-    SourceDB = pymysql_cursor('SELECT Name FROM SourceDic WHERE ID = "%s";' % row.SourceID)
-    if SourceDB in ['FUSCC_BZ', 'FUSCC_CZ']:
-      continue
-    ### Displayed Level
-    map_rule = {'1':'A', '2':'B', '3':'C', '4':'D', '5':'E'}#, '31':'E#'}
-    tmp_Level = map_rule[str(row.NormLevelID)]
-    # Judging Level
-    # 1. 疾病是提交疾病本身、子类、直系父类，等级不变：类似于将非小细胞肺癌药用于肺癌，无需降级
-    if set(therapy_disease_ids).intersection(disease_id):
-      Level = tmp_Level
-    # 2. 疾病是同类组织的其他分支疾病，或者直接是其他组织的适应症，需要降级
-    else:
-      # Level = 'C*' if tmp_Level == 'A' else 'E*'
-      Level = 'C' if tmp_Level == 'A' else 'E'
-    
-    ### Level Detail
-    First = "Source Database: %s." % SourceDB
-    raw_level = '-' if RawLevel == '-' else RawLevel.split('_')[1]
-    EvidenceLevel = "Evidence Level: %s" % raw_level
-    TumorType = "Tumor Type: %s" % row.TumorType
-    Alteration = "Alteration: %s" % row.Alteration
-    Therapy = "Therapy: %s" % row.Therapy
-    Details = [First, EvidenceLevel, TumorType, Alteration, Therapy]
-    others = pymysql_cursor('SELECT Annotation FROM ClinicalAnnotation WHERE DetailID = "%s";' % row.ID)
-    if others:
-      if type(others) != list:
-        others = [others]
-      for oth in others:
-        if oth.startswith('Indication: '):
-          if 'FDA-approved' in oth:
-            Guidelines["FDA"] = [oth]
-        else:
-          Details.append(oth)
-    URL = row.URL
-    Details.append(URL)
-    LevelDetails[SourceDB] = Details
-    
-    ### Biomarker Detail
-    Small_Variant = snpindel_biomarker[snpindel_biomarker.Gene == row.Gene].to_dict('records')
-    CNV = cnv_biomarker[cnv_biomarker.Gene == row.Gene].to_dict('records')
-    fusion_f = fusion_biomarker[(fusion_biomarker.gene1 == row.Gene) | (fusion_biomarker.gene2 == row.Gene)]
-    fusion_f.insert(0, 'Gene_Pair', fusion_f.gene1 + '::' + fusion_f.gene2)
-    Fusion = fusion_f.drop(columns=['gene1', 'gene2']).to_dict('records')
-    Expression = rna_biomarker[rna_biomarker.Gene == row.Gene].to_dict('records')
-    
-    ## Add result
-    direct_evidence.append([row.Gene, row.Variant, row.Source, Drugs, Response, Level, str(LevelDetails), str(Guidelines), str(Small_Variant), str(CNV), str(Fusion), str(Expression)])
+    if Drugs not in drug_blacklist:
+      drug_range = ",".join([str(i) for i in drugid])
+      ### Guidelines
+      Guidelines = {}
+      NCCNDrug = cursor.execute('SELECT DISTINCT NCCNRecommendedUse, Category, Route FROM NCCNDrug.Main WHERE \
+        DrugID IN (SELECT DISTINCT DomainID FROM NCCNDrug.Domain2Meta WHERE Class = "Drug" AND MetaID IN (%s)) AND \
+          DiseaseID IN (SELECT DISTINCT DomainID FROM NCCNDrug.Domain2Meta WHERE Class = "Disease" AND MetaID IN (%s));' % (drug_range, dis_range))
+      NCCNDrug = cursor.fetchall()
+      multi_nccn = []
+      if NCCNDrug:
+        for item in NCCNDrug:
+          multi_nccn.append("Recommended Use: %s. Category: %s. Route: %s." % (item[0], item[1], item[2]))
+        Guidelines["NCCN"] = list(set(multi_nccn))
+      
+      Response = row.Response
+      if Response in ['No Sensitivity', 'May Decrease Sensitivity', 'Reduced Sensitivity', 'Overcomes acquired resistance']:
+        continue
+      elif 'Sensitivity' in Response:
+        Response = 'Sensitivity'
+      elif 'Resistance' in Response:
+        Response = 'Resistance'
+      
+      LevelDetails = {}
+      ### Raw Level
+      RawLevel = pymysql_cursor('SELECT Name FROM EvidenceLevelDic WHERE ID = "%s";' % row.RawLevelID)
+      SourceDB = pymysql_cursor('SELECT Name FROM SourceDic WHERE ID = "%s";' % row.SourceID)
+      if SourceDB in ['FUSCC_BZ', 'FUSCC_CZ']:
+        continue
+      ### Displayed Level
+      map_rule = {'1':'A', '2':'B', '3':'C', '4':'D', '5':'E'}#, '31':'E#'}
+      tmp_Level = map_rule[str(row.NormLevelID)]
+      # Judging Level
+      # 1. 疾病是提交疾病本身、子类、直系父类，等级不变：类似于将非小细胞肺癌药用于肺癌，无需降级
+      if set(therapy_disease_ids).intersection(disease_id):
+        Level = tmp_Level
+      # 2. 疾病是同类组织的其他分支疾病，或者直接是其他组织的适应症，需要降级
+      else:
+        # Level = 'C*' if tmp_Level == 'A' else 'E*'
+        Level = 'C' if tmp_Level == 'A' else 'E'
+      
+      ### Level Detail
+      First = "Source Database: %s." % SourceDB
+      raw_level = '-' if RawLevel == '-' else RawLevel.split('_')[1]
+      EvidenceLevel = "Evidence Level: %s" % raw_level
+      TumorType = "Tumor Type: %s" % row.TumorType
+      Alteration = "Alteration: %s" % row.Alteration
+      Therapy = "Therapy: %s" % row.Therapy
+      Details = [First, EvidenceLevel, TumorType, Alteration, Therapy]
+      others = pymysql_cursor('SELECT Annotation FROM ClinicalAnnotation WHERE DetailID = "%s";' % row.ID)
+      if others:
+        if type(others) != list:
+          others = [others]
+        for oth in others:
+          if oth.startswith('Indication: '):
+            if 'FDA-approved' in oth:
+              Guidelines["FDA"] = [oth]
+          else:
+            Details.append(oth)
+      URL = row.URL
+      Details.append(URL)
+      LevelDetails[SourceDB] = Details
+      
+      ### Biomarker Detail
+      Small_Variant = snpindel_biomarker[snpindel_biomarker.Gene == row.Gene].to_dict('records')
+      CNV = cnv_biomarker[cnv_biomarker.Gene == row.Gene].to_dict('records')
+      fusion_f = fusion_biomarker[(fusion_biomarker.gene1 == row.Gene) | (fusion_biomarker.gene2 == row.Gene)]
+      fusion_f.insert(0, 'Gene_Pair', fusion_f.gene1 + '::' + fusion_f.gene2)
+      Fusion = fusion_f.drop(columns=['gene1', 'gene2']).to_dict('records')
+      Expression = rna_biomarker[rna_biomarker.Gene == row.Gene].to_dict('records')
+      
+      ## Add result
+      direct_evidence.append([row.Gene, row.Variant, row.Source, Drugs, Response, Level, str(LevelDetails), str(Guidelines), str(Small_Variant), str(CNV), str(Fusion), str(Expression)])
   
   DE = pd.DataFrame(direct_evidence, columns=['Gene', 'Alteration', 'Source', 'Drugs', 'Response', 'Level', 'Level_Details', 'Guidelines', 'Small_Variant', 'CNV', 'Fusion', 'Expression'], dtype='object').drop_duplicates()
 
@@ -174,62 +179,62 @@ def summary_report(merged_therapy, repurposing_therapy, chemotherapy, snpindel_b
     # if Drugs == None:
     #     Drugs = row.Therapy
     Drugs = pymysql_cursor('SELECT Therapy FROM MetaLite.Therapy WHERE ID = "%s";' % row.NormTherapyID)
+    if Drugs not in drug_blacklist:
+      drug_range = ",".join([str(i) for i in drugid])
+      ### Guidelines
+      Guidelines = {}
+      NCCNDrug = cursor.execute('SELECT DISTINCT NCCNRecommendedUse, Category, Route FROM NCCNDrug.Main WHERE \
+        DrugID IN (SELECT DISTINCT DomainID FROM NCCNDrug.Domain2Meta WHERE Class = "Drug" AND MetaID IN (%s)) AND \
+          DiseaseID IN (SELECT DISTINCT DomainID FROM NCCNDrug.Domain2Meta WHERE Class = "Disease" AND MetaID IN (%s));' % (drug_range, dis_range))
+      NCCNDrug = cursor.fetchall()
+      multi_nccn = []
+      if NCCNDrug:
+        for item in NCCNDrug:
+          multi_nccn.append("Recommended Use: %s. Category: %s. Route: %s." % (item[0], item[1], item[2]))
+        Guidelines["NCCN"] = list(set(multi_nccn))
+      
+      Response = row.Response
+      if Response in ['No Sensitivity', 'May Decrease Sensitivity', 'Reduced Sensitivity', 'Overcomes acquired resistance']:
+        continue
+      elif 'Sensitivity' in Response:
+        Response = 'Sensitivity'
+      elif 'Resistance' in Response:
+        Response = 'Resistance'
+      
+      LevelDetails = {}
+      ### Level
+      Level = 'E'
+      RawLevel = pymysql_cursor('SELECT Name FROM EvidenceLevelDic WHERE ID = "%s";' % row.RawLevelID)
+      SourceDB = pymysql_cursor('SELECT Name FROM SourceDic WHERE ID = "%s";' % row.SourceID)
+      if SourceDB in ['FUSCC_BZ', 'FUSCC_CZ']:
+        continue
+      ### Level Detail
+      First = "Source Database: %s." % SourceDB
+      raw_level = '-' if RawLevel == '-' else RawLevel.split('_')[1]
+      EvidenceLevel = "Evidence Level of the Associated Gene: %s." % raw_level
+      # Phenotype = "Phenotype: %s." % row.TumorType
+      Alteration = "Alteration: %s." % row.Alteration
+      # Therapy = "Therapy: %s." % row.Therapy
+      Details = [First, EvidenceLevel, Alteration]
+      others = pymysql_cursor('SELECT Annotation FROM ClinicalAnnotation WHERE DetailID = "%s";' % row.ID)
+      if others:
+        if type(others) != list:
+          others = [others]
+        for oth in others:
+          if oth.startswith('Indication: '):
+            if 'FDA-approved' in oth:
+              Guidelines["FDA"] = oth
+          else:
+            Details.append(oth)
+      URL = row.URL
+      Details.append(URL)
+      LevelDetails[SourceDB] = Details
 
-    drug_range = ",".join([str(i) for i in drugid])
-    ### Guidelines
-    Guidelines = {}
-    NCCNDrug = cursor.execute('SELECT DISTINCT NCCNRecommendedUse, Category, Route FROM NCCNDrug.Main WHERE \
-      DrugID IN (SELECT DISTINCT DomainID FROM NCCNDrug.Domain2Meta WHERE Class = "Drug" AND MetaID IN (%s)) AND \
-        DiseaseID IN (SELECT DISTINCT DomainID FROM NCCNDrug.Domain2Meta WHERE Class = "Disease" AND MetaID IN (%s));' % (drug_range, dis_range))
-    NCCNDrug = cursor.fetchall()
-    multi_nccn = []
-    if NCCNDrug:
-      for item in NCCNDrug:
-        multi_nccn.append("Recommended Use: %s. Category: %s. Route: %s." % (item[0], item[1], item[2]))
-      Guidelines["NCCN"] = list(set(multi_nccn))
-    
-    Response = row.Response
-    if Response in ['No Sensitivity', 'May Decrease Sensitivity', 'Reduced Sensitivity', 'Overcomes acquired resistance']:
-      continue
-    elif 'Sensitivity' in Response:
-      Response = 'Sensitivity'
-    elif 'Resistance' in Response:
-      Response = 'Resistance'
-    
-    LevelDetails = {}
-    ### Level
-    Level = 'E'
-    RawLevel = pymysql_cursor('SELECT Name FROM EvidenceLevelDic WHERE ID = "%s";' % row.RawLevelID)
-    SourceDB = pymysql_cursor('SELECT Name FROM SourceDic WHERE ID = "%s";' % row.SourceID)
-    if SourceDB in ['FUSCC_BZ', 'FUSCC_CZ']:
-      continue
-    ### Level Detail
-    First = "Source Database: %s." % SourceDB
-    raw_level = '-' if RawLevel == '-' else RawLevel.split('_')[1]
-    EvidenceLevel = "Evidence Level of the Associated Gene: %s." % raw_level
-    # Phenotype = "Phenotype: %s." % row.TumorType
-    Alteration = "Alteration: %s." % row.Alteration
-    # Therapy = "Therapy: %s." % row.Therapy
-    Details = [First, EvidenceLevel, Alteration]
-    others = pymysql_cursor('SELECT Annotation FROM ClinicalAnnotation WHERE DetailID = "%s";' % row.ID)
-    if others:
-      if type(others) != list:
-        others = [others]
-      for oth in others:
-        if oth.startswith('Indication: '):
-          if 'FDA-approved' in oth:
-            Guidelines["FDA"] = oth
-        else:
-          Details.append(oth)
-    URL = row.URL
-    Details.append(URL)
-    LevelDetails[SourceDB] = Details
-
-    ### Biomarker Detail
-    Small_Variant = indirect_biomarker[indirect_biomarker.Gene == row.Gene].to_dict('records')
-    
-    ## Add result
-    indirect_evidence.append([row.Gene, row.Source, row.Associated_Gene, row.Pathway, row.PPI_Score, Drugs, Response, Level, str(LevelDetails), str(Guidelines), str(Small_Variant)])
+      ### Biomarker Detail
+      Small_Variant = indirect_biomarker[indirect_biomarker.Gene == row.Gene].to_dict('records')
+      
+      ## Add result
+      indirect_evidence.append([row.Gene, row.Source, row.Associated_Gene, row.Pathway, row.PPI_Score, Drugs, Response, Level, str(LevelDetails), str(Guidelines), str(Small_Variant)])
   
   ### Transform and filter
   INDE = pd.DataFrame(indirect_evidence, columns=['Gene', 'Source', 'Associated_Gene', 'Pathway', 'PPI_Score', 'Drugs', 'Response', 'Level', 'Level_Details', 'Guidelines', 'Small_Variant'], dtype='object').drop_duplicates()
