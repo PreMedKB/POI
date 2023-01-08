@@ -281,10 +281,14 @@ def parse_rna(rna_exp, tissue, disease, assembly):
   
   # Transform the ID into Symbol.
   geneid2name = pd.read_csv("./assets/geneid2name.csv", sep=",")
-  rna_df_symbol = pd.merge(geneid2name, gene_e, on='gene_id')
-  # Summation of duplicate values by gene symbol, keep the max value
-  rna_df_symbol = rna_df_symbol.sort_values(['gene_symbol', 'TT'], ascending=[False, False])
-  rna_symbol = rna_df_symbol.drop_duplicates(subset='gene_symbol', keep='first')
+  if gene_e[gene_e.columns[0]].str.contains("ENSG").sum() > 0:
+    rna_df_symbol = pd.merge(geneid2name, gene_e, on='gene_id')
+    # Summation of duplicate values by gene symbol, keep the max value
+    rna_df_symbol = rna_df_symbol.sort_values(['gene_symbol', 'TT'], ascending=[False, False])
+    rna_symbol = rna_df_symbol.drop_duplicates(subset='gene_symbol', keep='first')
+  else:
+    rna_df_symbol=gene_e.sort_values(['gene_symbol', 'TT'], ascending=[False, False])
+    rna_symbol = rna_df_symbol.drop_duplicates(subset='gene_symbol', keep='first')
   
   # Filtering. raw read count >= 2 & tmp >= 0.5 are retained.
   # reference: https://f1000research.com/articles/5-1438 #Filtering to remove low counts
@@ -304,15 +308,36 @@ def parse_rna(rna_exp, tissue, disease, assembly):
     # Get log2(fold-change)
     converted_df.insert(converted_df.shape[1], 'log2fc', np.log2(converted_df.CPM_TT+0.01) - np.log2(converted_df.CPM_TP+0.01))
     # Judge the expression level
-    low_exp = converted_df[converted_df['log2fc'] <= -3.5] # which should use the threshold from the database
+    low_exp = converted_df[converted_df['log2fc'] <= -3] # which should use the threshold from the database
     low_exp.insert(low_exp.shape[1], 'Alteration', "Underexpression")
-    over_exp = converted_df[converted_df['log2fc'] >= 3.5]
+    over_exp = converted_df[converted_df['log2fc'] >= 3]
     over_exp.insert(over_exp.shape[1], 'Alteration', "Overexpression")
     # Merge the above three dataframe
-    biomarkers = pd.concat([low_exp[['gene_symbol', 'Alteration']], over_exp[['gene_symbol', 'Alteration']]], axis=0)
+    # biomarkers = pd.concat([low_exp[['gene_symbol', 'Alteration']], over_exp[['gene_symbol', 'Alteration']]], axis=0)
+    biomarkers = pd.concat([low_exp, over_exp], axis=0)
   # regard those overespression genes as expression genes
-  exp = over_exp
+  exp = over_exp.replace({"Alteration":{"Overexpression":"Expression"}})
   biomarkers_final = pd.concat([biomarkers, exp], axis=0)
+  
+  # # get CPM from RNA database; calculate the percentile of outlier gene in the patient
+  # outlier = set(biomarkers_final['gene_symbol'][biomarkers_final.gene_symbol.isin(rna_targets)].to_list())
+  # outlier_info = pd.DataFrame(columns={'gene_symbol', 'pecentile', 'rank_c'})
+  # for i in outlier:
+  #   cpm_list = pymysql_cursor('SELECT CPMTumor FROM POI.RNAExpression WHERE Symbol = "%s" AND ID IN (SELECT ExpressionID FROM POI.RNAExpression2TCGA WHERE TCGAID IN (SELECT ID FROM POI.RNATCGA WHERE NormTissue = "%s"));' % (i, tissue))
+  #   # cpm_list=[1,2,3,4,5,6,7,8,9,10]
+  #   cpm_p = biomarkers_final['CPM_TT'][biomarkers_final.gene_symbol==i].to_list()
+  #   cpm_a = (cpm_list + cpm_p); cpm_a.sort()
+  #   rank = cpm_a.index(cpm_p[0])+1; pecentile = rank/len(cpm_a)*100
+  #   rank_c = str(rank) + "/" + str(len(cpm_a))
+  #   temp = pd.DataFrame({'gene_symbol': [i],'pecentile': [pecentile],'rank_c': [rank_c]})
+  #   outlier_info = pd.concat([outlier_info,temp],ignore_index=True)
+
+  # # the dataframe for Biomarker Detail
+  # biomarkers_show = pd.merge(biomarkers_final, outlier_info,on = 'gene_symbol')
+  # # 2 digits
+  # biomarkers_show['CPM_TT'] = round(biomarkers_show['CPM_TT'],2)
+  # biomarkers_show['CPM_TP'] = round(biomarkers_show['CPM_TP'],2)
+  # biomarkers_show['pecentile'] = round(biomarkers_show['pecentile'],2)
   
   # Find therapies
   rna_therapy = pd.DataFrame()
@@ -334,7 +359,8 @@ def parse_rna(rna_exp, tissue, disease, assembly):
   rna_var = pd.DataFrame(metavariants, columns=['POID', 'VariantID', 'Gene', 'Alteration', 'Source'])
   biomarkers_final = biomarkers_final.rename(columns={'gene_symbol':'Gene', 'CPM_TT':'Tumor_CPM', 'CPM_TP':'Normal_CPM', 'logfc':'log2FC'})
   rna_biomarker = pd.merge(rna_var, biomarkers_final)
-  rna_biomarker.insert(0, 'Percentile', "78.5% (785/1000)")
+  rna_biomarker.insert(0, 'Percentile', "78.5%")
+  rna_biomarker.insert(1, 'Rank', '785/1000')
   rna_biomarker = rna_biomarker[['POID', 'Gene', 'Alteration', 'Tumor_CPM', 'Normal_CPM', 'log2FC', 'Percentile']]
   
   return(rna_therapy, metavariants, rna_biomarker)

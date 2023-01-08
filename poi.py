@@ -189,22 +189,28 @@ def main():
             normal_exp = os.path.join(fp, re.findall('.*NormalExp.*', f)[0])
         # Load the input data and generate the rna_df.
         tt_df = pd.read_csv(tumor_exp, sep="\t|,", engine='python', usecols=[0,1])
-        if tt_df.shape[1] == 1:
-          tt_df = pd.DataFrame({'gene_id': tt_df.index.to_list(), 'TT': tt_df.iloc[:,0].to_list()})
+        if tt_df[tt_df.columns[0]].str.contains("ENSG").sum() > 0:
+          if tt_df.shape[1] == 1:
+            tt_df = pd.DataFrame({'gene_id': tt_df.index.to_list(), 'TT': tt_df.iloc[:,0].to_list()})
+          else:
+            tt_df.columns = ['gene_id', 'TT']
+          # Double quotes and version number
+          tt_df.gene_id = tt_df.gene_id.str.strip('"|\'').str.split('.', expand=True)[0]
         else:
-          tt_df.columns = ['gene_id', 'TT']
-        # Double quotes and version number
-        tt_df.gene_id = tt_df.gene_id.str.strip('"|\'').str.split('.', expand=True)[0]
+          tt_df.columns = ['gene_symbol', 'TT']
         if normal_exp:
           tp_df = pd.read_csv(normal_exp, sep="\t|,", engine='python', usecols=[0,1])
-          if tp_df.shape[1] == 1:
-            tp_df = pd.DataFrame({'gene_id': tp_df.index.to_list(), 'TP': tp_df.iloc[:,0].to_list()})
+          if tp_df[tp_df.columns[0]].str.contains("ENSG").sum() > 0:
+            if tp_df.shape[1] == 1:
+              tp_df = pd.DataFrame({'gene_id': tp_df.index.to_list(), 'TP': tp_df.iloc[:,0].to_list()})
+            else:
+              tp_df.columns = ['gene_id', 'TP']
+            # Double quotes and version number
+            tp_df.gene_id = tp_df.gene_id.str.strip('"|\'').str.split('.', expand=True)[0]
           else:
-            tp_df.columns = ['gene_id', 'TP']
-          # Double quotes and version number
-          tp_df.gene_id = tp_df.gene_id.str.strip('"|\'').str.split('.', expand=True)[0]
+            tp_df.columns = ['gene_symbol', 'TP']
           # Merge
-          rna_exp = pd.merge(tt_df, tp_df, on='gene_id')
+          rna_exp = pd.merge(tt_df, tp_df)
         else:
           rna_exp = tt_df
       else:
