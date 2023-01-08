@@ -41,6 +41,7 @@ def main():
   
   # Get task which status is waiting(0)
   info = cursor.execute('SELECT * FROM POI.Case WHERE Status = 0 LIMIT 1;')
+  # info = cursor.execute('SELECT * FROM POI.Case WHERE Token = "example3_old";')
   info = cursor.fetchall()
   if info:
     ## Update status: 0 waiting; 1 running; 2 success; 3 failed
@@ -189,7 +190,7 @@ def main():
             normal_exp = os.path.join(fp, re.findall('.*NormalExp.*', f)[0])
         # Load the input data and generate the rna_df.
         tt_df = pd.read_csv(tumor_exp, sep="\t|,", engine='python', usecols=[0,1])
-        if tt_df[tt_df.columns[0]].str.contains("ENSG").sum() > 0:
+        if tt_df.iloc[0, 0].startswith("ENSG"):
           if tt_df.shape[1] == 1:
             tt_df = pd.DataFrame({'gene_id': tt_df.index.to_list(), 'TT': tt_df.iloc[:,0].to_list()})
           else:
@@ -200,7 +201,7 @@ def main():
           tt_df.columns = ['gene_symbol', 'TT']
         if normal_exp:
           tp_df = pd.read_csv(normal_exp, sep="\t|,", engine='python', usecols=[0,1])
-          if tp_df[tp_df.columns[0]].str.contains("ENSG").sum() > 0:
+          if tp_df.iloc[0, 0].startswith("ENSG"):
             if tp_df.shape[1] == 1:
               tp_df = pd.DataFrame({'gene_id': tp_df.index.to_list(), 'TP': tp_df.iloc[:,0].to_list()})
             else:
@@ -229,7 +230,7 @@ def main():
         assembly_dic = {'hg38': 'GRCh38', 'hg19': 'GRCh37'}
         if assembly.startswith('hg'):
           assembly = assembly_dic[assembly]
-        (merged_therapy, alt_num, snpindel_biomarker, cnv_biomarker, fusion_biomarker, rna_biomarker) = drug_direct(tissue, disease, assembly, somatic_anno, germline_anno, cnv, fusion, tmb, msi, rna_exp, db, cursor)
+        (merged_therapy, alt_num, snpindel_biomarker, cnv_biomarker, fusion_biomarker, rna_biomarker) = drug_direct(tissue, disease, assembly, race, somatic_anno, germline_anno, cnv, fusion, tmb, msi, rna_exp, db, cursor)
         alterations_num = alterations_num + alt_num
         status = 1
       except Exception:
@@ -258,15 +259,16 @@ def main():
         if germline_vcf:
           panno_path = '/mnt/case/%s/panno.html' % token
           dic_diplotype, dic_rs2gt, hla_subtypes = resolution(case['Population'], germline_vcf)
-          # Summary, PrescribingInfo, MultiLocus, SingleLocus, PhenotypePrediction, ClinicalAnnotation = annotation(dic_diplotype, dic_rs2gt, hla_subtypes)
-          # report(race, Summary, PrescribingInfo, MultiLocus, SingleLocus, PhenotypePrediction, ClinicalAnnotation, panno_path, token)
           chemo_summary, prescribing_info, multi_var, single_var, phenotype_predict, clinical_anno = annotation(dic_diplotype, dic_rs2gt, hla_subtypes)
           report(race, chemo_summary, prescribing_info, multi_var, single_var, phenotype_predict, clinical_anno, panno_path, token)
+          # chemo_summary
+          for key in chemo_summary.keys():
+            for i in range(0, len(chemo_summary[key])):
+              chemo_summary[key][i] = chemo_summary[key][i].title()
           # Merge guidelines with clinical annotations
           chemotherapy = prescribing_info.merge(clinical_anno, how='left')
-          multi_var = multi_var.rename({'Detected Alleles':'Variant Call'})
-          single_var = single_var.rename({'Detected Alleles':'Variant Call'})
-          # alterations_num = alterations_num + alt_num
+          multi_var = multi_var.rename({'Effect on Protein':'Effect_on_Protein', 'Definition of Alleles':'Definition_of_Alleles', 'Variant Call':'Variant_Call'})
+          single_var = single_var.rename({'Effect on Protein':'Effect_on_Protein', 'Definition of Alleles':'Definition_of_Alleles', 'Variant Call':'Variant_Call'})
         else:
           chemo_summary = {'Avoid': [], 'Caution': [], 'Routine': []}
           chemotherapy = pd.DataFrame()
@@ -294,26 +296,14 @@ def main():
     t5 = time.time(); summarize_time = round(t5-t4,3)
     FinalResult['Time'] = {'Preprocess': preprocess_time, 'Direct': direct_time, 'Indirect': indirect_time, 'Response': response_time, 'Summarize': summarize_time}
     FinalResult['Status'] = status
-
+    
     ##### Export the POI report
     path = '/mnt/case/%s/summary.json' % token
     with open(path, "w") as f:
       json.dump(FinalResult, f, indent=2, ensure_ascii=False)
     
-    # www_path = "/var/www/html/case/%s" % token
-    # if not os.path.exists(www_path):
-    #   os.mkdir(www_path)
-    
-    # # Copy output in /mnt/case into /var/www/html/case
-    # try:
-    #   os.system('cp /mnt/case/%s/summary.json %s' % (token, www_path))
-    #   os.system('cp /mnt/case/%s/panno.html %s' % (token, www_path))
-    # except Exception:
-    #   pass
-    
     # Compress the results
     os.system('zip -r -j /mnt/case/%s/premedkb-poi-report.zip /mnt/case/%s/summary.json /mnt/case/%s/panno.html' % (token, token, token))
-    
     
     ## Update status: 0 waiting; 1 running; 2 success; 3 failed
     pymysql_cursor('UPDATE POI.Case SET Status = "%s" WHERE Token = "%s";' % (status, token))

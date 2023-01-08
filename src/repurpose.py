@@ -138,12 +138,13 @@ def drug_repurpose(somatic_anno, germline_anno, race, disease_id, db, cursor):
   ### !!! IMPORTANT: Find the therapy range
   detail_ids = pymysql_cursor('SELECT DISTINCT DetailID FROM TherapyHasDetail WHERE TherapyID IN (SELECT ID FROM Therapy WHERE DiseaseID IN (%s));' % ",".join([str(i) for i in disease_id]))
   associated_therapy = []
+  
+  column_names = pymysql_cursor("SELECT column_name FROM information_schema.columns WHERE table_schema='OT' AND table_name='TherapyDetail';")
+  # reuse_names = reuse.columns.to_list()
+  # column_names.extend(reuse_names)
+  column_names = ['POID'] + column_names
+  
   if reuse.empty == False:
-    column_names = pymysql_cursor("SELECT column_name FROM information_schema.columns WHERE table_schema='OT' AND table_name='TherapyDetail';")
-    # reuse_names = reuse.columns.to_list()
-    # column_names.extend(reuse_names)
-    column_names = ['POID'] + column_names
-    
     for index, row in reuse.iterrows():
       # Find all variants corresponding to each gene
       ass_mg_id = get_metaid(row.Associated_Gene, "gene")[0]

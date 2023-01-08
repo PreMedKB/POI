@@ -15,13 +15,19 @@ def concat_func(x):
 def summary_report(merged_therapy, repurposing_therapy, chemotherapy, snpindel_biomarker, cnv_biomarker, fusion_biomarker, rna_biomarker, indirect_biomarker, multi_var, single_var, disease_id, db, cursor):
   
   drug_blacklist = open('./assets/drug_blacklist.txt').read().split('\n')
-
+  
   if not merged_therapy.empty:
     merged_therapy = merged_therapy[merged_therapy.NormLevelID != 31]
   if not repurposing_therapy.empty:
     repurposing_therapy = repurposing_therapy[repurposing_therapy.NormLevelID != 31]
   
-  alt_poids = []
+  snpindel_biomarker.fillna('', inplace=True)
+  cnv_biomarker.fillna('', inplace=True)
+  fusion_biomarker.fillna('', inplace=True)
+  rna_biomarker.fillna('', inplace=True)
+  indirect_biomarker.fillna('', inplace=True)
+  multi_var.fillna('', inplace=True)
+  single_var.fillna('', inplace=True)
 
   ################################## Part 1: directed drug recommendation
   print("Part 1: directed drug recommendation")
@@ -110,18 +116,27 @@ def summary_report(merged_therapy, repurposing_therapy, chemotherapy, snpindel_b
       LevelDetails[SourceDB] = Details
       
       ### Biomarker Detail
-      Small_Variant = snpindel_biomarker[snpindel_biomarker.Gene == row.Gene].to_dict('records')
-      CNV = cnv_biomarker[cnv_biomarker.Gene == row.Gene].to_dict('records')
-      fusion_f = fusion_biomarker[(fusion_biomarker.gene1 == row.Gene) | (fusion_biomarker.gene2 == row.Gene)]
-      fusion_f.insert(0, 'Gene_Pair', fusion_f.gene1 + '::' + fusion_f.gene2)
-      Fusion = fusion_f.drop(columns=['gene1', 'gene2']).to_dict('records')
-      Expression = rna_biomarker[rna_biomarker.Gene == row.Gene].to_dict('records')
-      
+      Small_Variant = []; CNV = []; Fusion = []; Expression = []
+      if snpindel_biomarker.empty == False:
+        Small_Variant = snpindel_biomarker[snpindel_biomarker.Gene == row.Gene].to_dict('records')
+        Small_Variant = [str(x) for x in Small_Variant]
+      if cnv_biomarker.empty == False:
+        CNV = cnv_biomarker[cnv_biomarker.Gene == row.Gene].to_dict('records')
+        CNV = [str(x) for x in CNV]
+      if fusion_biomarker.empty == False:
+        fusion_f = fusion_biomarker[(fusion_biomarker.gene1 == row.Gene) | (fusion_biomarker.gene2 == row.Gene)]
+        fusion_f.insert(0, 'Gene_Pair', fusion_f.gene1 + '::' + fusion_f.gene2)
+        Fusion = fusion_f.drop(columns=['gene1', 'gene2']).to_dict('records')
+        Fusion = [str(x) for x in Fusion]
+      if rna_biomarker.empty == False:
+        Expression = rna_biomarker[rna_biomarker.Gene == row.Gene].to_dict('records')
+        Expression = [str(x) for x in Expression]
+        
       ## Add result
       direct_evidence.append([row.Gene, row.Variant, row.Source, Drugs, Response, Level, str(LevelDetails), str(Guidelines), str(Small_Variant), str(CNV), str(Fusion), str(Expression)])
   
   DE = pd.DataFrame(direct_evidence, columns=['Gene', 'Alteration', 'Source', 'Drugs', 'Response', 'Level', 'Level_Details', 'Guidelines', 'Small_Variant', 'CNV', 'Fusion', 'Expression'], dtype='object').drop_duplicates()
-
+  
   ### Transform and filter
   DE = DE.sort_values('Level').reset_index(drop=True)
   DE_F = DE.groupby(['Gene', 'Alteration', 'Source', 'Drugs', 'Response', 'Level', 'Small_Variant', 'CNV', 'Fusion', 'Expression']).apply(concat_func).reset_index()
@@ -139,15 +154,37 @@ def summary_report(merged_therapy, repurposing_therapy, chemotherapy, snpindel_b
     for detail in eval(item['Level_Details']):
       Level_Details.update(eval(detail))
     item['Level_Details'] = Level_Details
+    
     Guidelines = {}
     for guide in eval(item['Guidelines']):
       Guidelines.update(eval(guide))
-    item['Small_Variant'] = eval(Small_Variant)
-    item['CNV'] = eval(CNV)
-    item['Fusion'] = eval(Fusion)
-    item['Expression'] = eval(Expression)
-  
+    item['Guidelines'] = Guidelines
+    
+    Small_Variant = []
+    for i in range(0,len(eval(item['Small_Variant']))):
+      ele = eval(item['Small_Variant'])[i]
+      Small_Variant.append(eval(ele))
+    item['Small_Variant'] = Small_Variant
+    
+    CNV = []
+    for i in range(0,len(eval(item['CNV']))):
+      ele = eval(item['CNV'])[i]
+      CNV.append(eval(ele))
+    item['CNV'] = CNV
+    
+    Fusion = []
+    for i in range(0,len(eval(item['Fusion']))):
+      ele = eval(item['Fusion'])[i]
+      Fusion.append(eval(ele))
+    item['Fusion'] = Fusion
 
+    Expression = []
+    for i in range(0,len(eval(item['Expression']))):
+      ele = eval(item['Expression'])[i]
+      Expression.append(eval(ele))
+    item['Expression'] = Expression
+  
+  
   ################################## Part 2: indirected drug recommendation
   print("Part 2: indirected drug recommendation")
   indirect_evidence = []
@@ -231,7 +268,10 @@ def summary_report(merged_therapy, repurposing_therapy, chemotherapy, snpindel_b
       LevelDetails[SourceDB] = Details
 
       ### Biomarker Detail
-      Small_Variant = indirect_biomarker[indirect_biomarker.Gene == row.Gene].to_dict('records')
+      Small_Variant = []
+      if snpindel_biomarker.empty == False:
+        Small_Variant = indirect_biomarker[indirect_biomarker.Gene == row.Gene].to_dict('records')
+        Small_Variant = [str(x) for x in Small_Variant]
       
       ## Add result
       indirect_evidence.append([row.Gene, row.Source, row.Associated_Gene, row.Pathway, row.PPI_Score, Drugs, Response, Level, str(LevelDetails), str(Guidelines), str(Small_Variant)])
@@ -254,13 +294,19 @@ def summary_report(merged_therapy, repurposing_therapy, chemotherapy, snpindel_b
     for detail in eval(item['Level_Details']):
       Level_Details.update(eval(detail))
     item['Level_Details'] = Level_Details
+    
     Guidelines = {}
     for guide in eval(item['Guidelines']):
       Guidelines.update(eval(guide))
     item['Guidelines'] = Guidelines
-    item['Small_Variant'] = eval(Small_Variant)
+    
+    Small_Variant = []
+    for i in range(0,len(eval(item['Small_Variant']))):
+      ele = eval(item['Small_Variant'])[i]
+      Small_Variant.append(eval(ele))
+    item['Small_Variant'] = Small_Variant
   
-  
+
   ################################## Part 3: drug_response
   print("Part 3: drug_response")
   drug_response = []
@@ -307,7 +353,9 @@ def summary_report(merged_therapy, repurposing_therapy, chemotherapy, snpindel_b
     
     # Biomarker Detail
     Multi_Variant = multi_var[multi_var.Gene == Gene].to_dict('records')
+    Multi_Variant = [str(x) for x in Multi_Variant]
     Single_Variant = single_var[single_var.Gene == Gene].to_dict('records')
+    Single_Variant = [str(x) for x in Single_Variant]
     
     ## Add result
     drug_response.append([Gene, Diplotype, 'Germline', Drugs, Category, Response, Level, str(LevelDetails), str(Guidelines), str(Multi_Variant), str(Single_Variant)])
@@ -333,12 +381,23 @@ def summary_report(merged_therapy, repurposing_therapy, chemotherapy, snpindel_b
     for detail in eval(item['Level_Details']):
       Level_Details.update(eval(detail))
     item['Level_Details'] = Level_Details
+    
     Guidelines = {}
     for guide in eval(item['Guidelines']):
       Guidelines.update(eval(guide))
     item['Guidelines'] = Guidelines
-    item['Multi_Variant'] = eval(Multi_Variant)
-    item['Single_Variant'] = eval(Single_Variant)
+    
+    Multi_Variant = []
+    for i in range(0,len(eval(item['Multi_Variant']))):
+      ele = eval(item['Multi_Variant'])[i]
+      Multi_Variant.append(eval(ele))
+    item['Multi_Variant'] = Multi_Variant
+    
+    Single_Variant = []
+    for i in range(0, len(eval(item['Single_Variant']))):
+      ele = eval(item['Single_Variant'])[i]
+      Single_Variant.append(eval(ele))
+    item['Single_Variant'] = Single_Variant
   
   
   ################################## Part 4: Generating a single file

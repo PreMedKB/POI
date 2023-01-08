@@ -218,12 +218,12 @@ def parse_cnv(cnv, assembly):
   
   # Biomarker details
   cnv_var = pd.DataFrame(metavariants, columns=['POID', 'VariantID', 'Gene', 'Alteration', 'Source'])
-  cnv = cnv.rename(columns = {'symbol':'Gene', 'estimation':'CNV State'})
+  cnv = cnv.rename(columns = {'symbol':'Gene', 'estimation':'CNV_State'})
   cnv_biomarker = pd.concat([cnv, pd.DataFrame(columns=['Copy_Change', 'LOH_State', 'Cytoband', 'Location'])], axis=1)
   cnv_biomarker = cnv_biomarker[cnv_biomarker.POID.isin(cnv_var.POID.to_list())]
   cnv_biomarker = cnv_biomarker[['POID', 'Gene', 'Copy_Change', 'CNV_State', 'LOH_State', 'Cytoband', 'Location']]
   
-  return(cnv_therapy, metavariants)
+  return(cnv_therapy, metavariants, cnv_biomarker)
 
 
 def parse_fusion(fusion, assembly):
@@ -281,7 +281,7 @@ def parse_rna(rna_exp, tissue, disease, assembly):
   
   # Transform the ID into Symbol.
   geneid2name = pd.read_csv("./assets/geneid2name.csv", sep=",")
-  if gene_e[gene_e.columns[0]].str.contains("ENSG").sum() > 0:
+  if 'gene_id' in gene_e.columns:
     rna_df_symbol = pd.merge(geneid2name, gene_e, on='gene_id')
     # Summation of duplicate values by gene symbol, keep the max value
     rna_df_symbol = rna_df_symbol.sort_values(['gene_symbol', 'TT'], ascending=[False, False])
@@ -357,10 +357,10 @@ def parse_rna(rna_exp, tissue, disease, assembly):
   
   # Biomarker details
   rna_var = pd.DataFrame(metavariants, columns=['POID', 'VariantID', 'Gene', 'Alteration', 'Source'])
-  biomarkers_final = biomarkers_final.rename(columns={'gene_symbol':'Gene', 'CPM_TT':'Tumor_CPM', 'CPM_TP':'Normal_CPM', 'logfc':'log2FC'})
+  biomarkers_final = biomarkers_final.rename(columns={'gene_symbol':'Gene', 'CPM_TT':'Tumor_CPM', 'CPM_TP':'Normal_CPM', 'log2fc':'log2FC'})
   rna_biomarker = pd.merge(rna_var, biomarkers_final)
   rna_biomarker.insert(0, 'Percentile', "78.5%")
   rna_biomarker.insert(1, 'Rank', '785/1000')
-  rna_biomarker = rna_biomarker[['POID', 'Gene', 'Alteration', 'Tumor_CPM', 'Normal_CPM', 'log2FC', 'Percentile']]
+  rna_biomarker = rna_biomarker[['POID', 'Gene', 'Alteration', 'Tumor_CPM', 'Normal_CPM', 'log2FC', 'Rank', 'Percentile']]
   
   return(rna_therapy, metavariants, rna_biomarker)
