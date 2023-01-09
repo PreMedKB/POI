@@ -135,7 +135,7 @@ def parse_txt(anno, assembly, source, race, genelist=None):
       wt_del.append([gene, row['ExonicFunc.refGene'], row.POID])
     # Small variants
     else:
-      nm_exon_cc_pc = parse_aachange(row['AAChange.refGene'], row['GeneDetail.refGene']) # return [] for splicing
+      nm_exon_cc_pc = parse_aachange(row['Gene.refGene'], row['AAChange.refGene'], row['GeneDetail.refGene']) # return [] for splicing
       fuc = row.Function
       # ClinVar
       if '|' in row['CLNSIG']:

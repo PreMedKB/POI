@@ -269,7 +269,7 @@ def summary_report(merged_therapy, repurposing_therapy, chemotherapy, snpindel_b
 
       ### Biomarker Detail
       Small_Variant = []
-      if snpindel_biomarker.empty == False:
+      if indirect_biomarker.empty == False:
         Small_Variant = indirect_biomarker[indirect_biomarker.Gene == row.Gene].to_dict('records')
         Small_Variant = [str(x) for x in Small_Variant]
       
@@ -323,7 +323,9 @@ def summary_report(merged_therapy, repurposing_therapy, chemotherapy, snpindel_b
     ### Guidelines
     Guidelines = {}
     Guidelines[row.Source] = [row.Recommendation]
-    Diplotype = row.Variant + ' ' + row.Diplotype; Diplotype = Diplotype.strip()
+    # Diplotype = row.Variant + ' ' + row.Diplotype; Diplotype = Diplotype.strip()
+    Variant = row.Variant
+    Allele = row.Diplotype
     Category = row.PhenotypeCategory
     Response = row.PAnnoPhenotype
     if type(Response) != str:
@@ -358,15 +360,15 @@ def summary_report(merged_therapy, repurposing_therapy, chemotherapy, snpindel_b
     Single_Variant = [str(x) for x in Single_Variant]
     
     ## Add result
-    drug_response.append([Gene, Diplotype, 'Germline', Drugs, Category, Response, Level, str(LevelDetails), str(Guidelines), str(Multi_Variant), str(Single_Variant)])
+    drug_response.append([Gene, row.Variant, row.Diplotype, 'Germline', Drugs, Category, Response, Level, str(LevelDetails), str(Guidelines), str(Multi_Variant), str(Single_Variant)])
   
-  DR = pd.DataFrame(drug_response, columns=['Gene', 'Diplotype', 'Source', 'Drugs', 'Category', 'Response', 'Level', 'Level_Details', 'Guidelines', 'Multi_Variant', 'Single_Variant'], dtype='object').drop_duplicates()
+  DR = pd.DataFrame(drug_response, columns=['Gene', 'Variant', 'Allele', 'Source', 'Drugs', 'Category', 'Response', 'Level', 'Level_Details', 'Guidelines', 'Multi_Variant', 'Single_Variant'], dtype='object').drop_duplicates()
   DR = DR[DR.Gene != '-']
   ## 如果将Level Details和Guidelines合并
   # 1. 先排序
   DR = DR.sort_values('Level').reset_index(drop=True)
   # 2. 找到重复行，合并Level Details
-  DR_F = DR.groupby(['Gene', 'Diplotype', 'Source', 'Drugs', 'Category', 'Response', 'Level', 'Multi_Variant', 'Single_Variant']).apply(concat_func).reset_index()
+  DR_F = DR.groupby(['Gene', 'Variant', 'Allele', 'Source', 'Drugs', 'Category', 'Response', 'Level', 'Multi_Variant', 'Single_Variant']).apply(concat_func).reset_index()
   for index, row in DR_F.iterrows():
     DR_F.loc[index, 'Level_Details'] = str(row.Level_Details.split('|'))
     DR_F.loc[index, 'Guidelines'] = str(row.Guidelines.split('|'))

@@ -41,7 +41,7 @@ def main():
   
   # Get task which status is waiting(0)
   info = cursor.execute('SELECT * FROM POI.Case WHERE Status = 0 LIMIT 1;')
-  # info = cursor.execute('SELECT * FROM POI.Case WHERE Token = "example3_old";')
+  # info = cursor.execute('SELECT * FROM POI.Case WHERE Token = "example1";')
   info = cursor.fetchall()
   if info:
     ## Update status: 0 waiting; 1 running; 2 success; 3 failed
@@ -298,12 +298,12 @@ def main():
     FinalResult['Status'] = status
     
     ##### Export the POI report
-    path = '/mnt/case/%s/summary.json' % token
+    path = '/mnt/case/%s/summary.v2.json' % token
     with open(path, "w") as f:
       json.dump(FinalResult, f, indent=2, ensure_ascii=False)
     
     # Compress the results
-    os.system('zip -r -j /mnt/case/%s/premedkb-poi-report.zip /mnt/case/%s/summary.json /mnt/case/%s/panno.html' % (token, token, token))
+    os.system('zip -r -j /mnt/case/%s/premedkb-poi-report.zip /mnt/case/%s/summary.v2.json /mnt/case/%s/panno.html' % (token, token, token))
     
     ## Update status: 0 waiting; 1 running; 2 success; 3 failed
     pymysql_cursor('UPDATE POI.Case SET Status = "%s" WHERE Token = "%s";' % (status, token))

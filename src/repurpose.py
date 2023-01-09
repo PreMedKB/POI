@@ -30,7 +30,7 @@ def drug_repurpose(somatic_anno, germline_anno, race, disease_id, db, cursor):
   def anno_preprocess(anno, race, source, related_target):
     anno = anno[anno['Gene.refGene'].isin(related_target)].reset_index(drop=True)
     anno.insert(0, 'POID', ['%s.%s.indirect' % (source, str(i+1)) for i in anno.index.to_list()])
-    anno.insert(1, 'Origin', source)
+    anno.insert(1, 'Source', source)
     anno.insert(2, 'Location', anno.Chr+':'+anno.Start.astype(str))
     anno.insert(3, 'Ref>Alt', anno.Ref+'>'+anno.Alt)
     # ExonicFunc.refGene for splicing, intronic, UTR, etc., are all '.'.
@@ -45,7 +45,7 @@ def drug_repurpose(somatic_anno, germline_anno, race, disease_id, db, cursor):
     anno.insert(6, 'Exon', '.')
     anno.insert(7, 'Protein_Change', '.')
     for index, row in anno.iterrows():
-      nm_exon_cc_pc = parse_aachange(row['AAChange.refGene'], row['GeneDetail.refGene'])
+      nm_exon_cc_pc = parse_aachange(row['Gene.refGene'], row['AAChange.refGene'], row['GeneDetail.refGene'])
       if nm_exon_cc_pc != []:
         anno.loc[index, 'Transcript'] = nm_exon_cc_pc[0][0]
         anno.loc[index, 'Exon'] = nm_exon_cc_pc[0][1]
@@ -62,7 +62,7 @@ def drug_repurpose(somatic_anno, germline_anno, race, disease_id, db, cursor):
     anno.loc[d_index, 'Pathogenic_Prediction'] = 'Deleterious'
     
     # Select columns due to the potential difference between germline and somatic txt
-    cols = ['POID', 'Gene', 'Origin', 'Location', 'Ref>Alt', 'Transcript', 'Exon', 'Protein_Change', 'Function', 'Clinical_Significance', 'Pathogenic_Prediction', 'Population_AF']
+    cols = ['POID', 'Gene', 'Source', 'Location', 'Ref>Alt', 'Transcript', 'Exon', 'Protein_Change', 'Function', 'Clinical_Significance', 'Pathogenic_Prediction', 'Population_AF']
     anno_res = anno[cols]
     
     return(anno_res)
@@ -126,7 +126,7 @@ def drug_repurpose(somatic_anno, germline_anno, race, disease_id, db, cursor):
   
   # Filtering based on cut-off
   reuse.sort_values(by = "PPI_Score", inplace=True, ascending=False)
-  cutoff = 0.95
+  cutoff = 0.99
   reuse = reuse[reuse.PPI_Score >= cutoff]
   print("%s of the gene pairs have a confidencial score > %s." % (reuse.shape[0], cutoff))
   reuse = reuse.reset_index(drop=True)
@@ -140,9 +140,7 @@ def drug_repurpose(somatic_anno, germline_anno, race, disease_id, db, cursor):
   associated_therapy = []
   
   column_names = pymysql_cursor("SELECT column_name FROM information_schema.columns WHERE table_schema='OT' AND table_name='TherapyDetail';")
-  # reuse_names = reuse.columns.to_list()
-  # column_names.extend(reuse_names)
-  column_names = ['POID'] + column_names
+  column_names = ['POID'] + column_names + reuse.columns.to_list()
   
   if reuse.empty == False:
     for index, row in reuse.iterrows():
@@ -151,18 +149,17 @@ def drug_repurpose(somatic_anno, germline_anno, race, disease_id, db, cursor):
       reuse.loc[index, 'GeneID'] = ass_mg_id
     
       ### Searching by row: Drug and therapy data
-      if row.Origin == 'Somatic':
-        therapy_detail = cursor.execute('SELECT * FROM TherapyDetail WHERE SourceID != 4 AND OriginID IN (SELECT ID FROM OriginDic WHERE Name REGEXP "Somatic" OR Name =  "Unknown") AND ID IN (%s) AND ID IN \
+      if row.Source == 'Somatic':
+        therapy_detail = cursor.execute('SELECT * FROM TherapyDetail WHERE SourceID != 4 AND OriginID IN (SELECT ID FROM OriginDic WHERE Name REGEXP "Somatic") AND ID IN (%s) AND ID IN \
           (SELECT DetailID FROM TherapyHasDetail WHERE TherapyID IN \
             (SELECT TherapyID FROM TherapyTarget WHERE GeneID = "%s"));' % (",".join([str(i) for i in detail_ids]), ass_mg_id))
-      elif row.Origin == 'Germline':
-        therapy_detail = cursor.execute('SELECT * FROM TherapyDetail WHERE SourceID != 4 AND OriginID IN (SELECT ID FROM OriginDic WHERE Name REGEXP "Germline" OR Name =  "Unknown") AND ID IN (%s) AND ID IN \
+      elif row.Source == 'Germline':
+        therapy_detail = cursor.execute('SELECT * FROM TherapyDetail WHERE SourceID != 4 AND OriginID IN (SELECT ID FROM OriginDic WHERE Name REGEXP "Germline") AND ID IN (%s) AND ID IN \
           (SELECT DetailID FROM TherapyHasDetail WHERE TherapyID IN \
             (SELECT TherapyID FROM TherapyTarget WHERE GeneID = "%s"));' % (",".join([str(i) for i in detail_ids]), ass_mg_id))
       therapy_detail = cursor.fetchall()
       for item in therapy_detail:
-        item = [row.POID] + list(item)
-        # item.extend(row.to_list())
+        item = [row.POID] + list(item) + row.to_list()
         associated_therapy.append(item)
     
     # Transfer to dataframe

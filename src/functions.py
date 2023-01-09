@@ -133,27 +133,40 @@ def load_logging_cfg(DEFAULT):
 
 
 ## Function used to parse the AAVariant.
-def parse_aachange(aachange, genedetail):
+def parse_aachange(gene, aachange, genedetail):
+  transcript = pd.read_csv('./assets/transcript.txt', sep = '\t')
   nm_exon_cc_pc = []
   if aachange != '.' and aachange != [None] and aachange != 'UNKNOWN':
     if type(aachange) is list: # VCF
       AAChange = aachange
     else: # TXT
       AAChange = aachange.split(',')
-    for i in AAChange:
+    for x in range(0, len(AAChange)):
+      i = AAChange[x]
       nm = re.findall(r'\w+:(\w+):\w+:c.[\w\->]+:p.\w+', i)[0] if re.findall(r'\w+:(\w+):\w+:c.[\w\->]+:p.\w+', i) else ''
       exon = re.findall(r'\w+:\w+:(exon\d+):c.[\w\->]+:p.\w+', i)[0] if re.findall(r'\w+:\w+:(exon\d+):c.[\w\->]+:p.\w+', i) else ''
       cc = re.findall(r':(c.[\w\->]+)', i)[0] if re.findall(r':(c.[\w\->]+)', i) else ''
       pc = re.findall(r':(p.\w+)', i)[0] if re.findall(r':(p.\w+)', i) else ''
-      nm_exon_cc_pc.append([nm, exon, cc, pc])
+      # Filter by transcript
+      if gene in transcript.gene_name.to_list():
+        if nm == transcript[transcript.gene_name == gene]['nm_name'].to_list()[0]:
+          nm_exon_cc_pc.append([nm, exon, cc, pc])
+      elif x == 0:
+        nm_exon_cc_pc.append([nm, exon, cc, pc])
   elif genedetail != '.' and aachange == '.':
     GeneDetail = genedetail.split(',')
-    for i in GeneDetail:
+    for x in range(0, len(GeneDetail)):
+      i = GeneDetail[x]
       nm = re.findall(r'(\w+):\w+:c.[\w\->]+', i)[0] if re.findall(r'(\w+):\w+:c.[\w\->]+', i) else ''
       exon = re.findall(r'\w+:(exon\d+):c.[\w\->]+', i)[0] if re.findall(r'\w+:(exon\d+):c.[\w\->]+', i) else ''
       cc = re.findall(r':(c.[\w\->]+)', i)[0] if re.findall(r':(c.[\w\->]+)', i) else ''
       pc = ''
-      nm_exon_cc_pc.append([nm, exon, cc, pc])
+      # Filter by transcript
+      if gene in transcript.gene_name.to_list():
+        if nm == transcript[transcript.gene_name == gene]['nm_name'].to_list()[0]:
+          nm_exon_cc_pc.append([nm, exon, cc, pc])
+      elif x == 0:
+        nm_exon_cc_pc.append([nm, exon, cc, pc])
   
   return (nm_exon_cc_pc)
 
@@ -308,9 +321,9 @@ def search_snpindel(gene, var, source, assembly):
   if var_range != "":
     ## Somatic and Germline
     if re.search('Somatic', source, flags=re.IGNORECASE):
-      therapy_detail = cursor.execute('SELECT * FROM TherapyDetail WHERE SourceID != 4 AND OriginID IN (SELECT ID FROM OriginDic WHERE Name LIKE "%{0}%" OR Name = "Unknown") AND ID IN (SELECT DetailID FROM TherapyHasDetail WHERE TherapyID IN (SELECT ID FROM Therapy WHERE VariantID IN ({1})));'.format('Somatic', var_range))
+      therapy_detail = cursor.execute('SELECT * FROM TherapyDetail WHERE SourceID != 4 AND OriginID IN (SELECT ID FROM OriginDic WHERE Name LIKE "%{0}%") AND ID IN (SELECT DetailID FROM TherapyHasDetail WHERE TherapyID IN (SELECT ID FROM Therapy WHERE VariantID IN ({1})));'.format('Somatic', var_range))
     elif re.search('Germline', source, flags=re.IGNORECASE):
-      therapy_detail = cursor.execute('SELECT * FROM TherapyDetail WHERE SourceID != 4 AND OriginID IN (SELECT ID FROM OriginDic WHERE Name LIKE "%{0}%" OR Name = "Unknown") AND ID IN (SELECT DetailID FROM TherapyHasDetail WHERE TherapyID IN (SELECT ID FROM Therapy WHERE VariantID IN ({1})));'.format('Germline', var_range))
+      therapy_detail = cursor.execute('SELECT * FROM TherapyDetail WHERE SourceID != 4 AND OriginID IN (SELECT ID FROM OriginDic WHERE Name LIKE "%{0}%") AND ID IN (SELECT DetailID FROM TherapyHasDetail WHERE TherapyID IN (SELECT ID FROM Therapy WHERE VariantID IN ({1})));'.format('Germline', var_range))
     therapy_detail = cursor.fetchall()
     # Change the format
     out = [list(item) for item in therapy_detail]
@@ -321,17 +334,17 @@ def search_snpindel(gene, var, source, assembly):
       Alteration = var
     else:
       chrom = "%s:%s" % (chr, pos)
-      refalt = "%s>%s" % (ref, '/'.join(['%s' % a for a in alt]))
+      refalt = "%s>%s" % (ref, alt)
       if pc != []:
-        Alteration = ",".join([chrom, refalt, nm, exon, pc])
+        Alteration = "chr%s,%s,%s,exon %s,%s" % (chrom, refalt, nm, exon, pc)
       elif nm != [] and exon != []:
-        Alteration = ",".join([chrom, refalt, nm, exon])
+        Alteration = "chr%s,%s,%s,exon %s" % (chrom, refalt, nm, exon)
       elif nm != []:
-        Alteration = ",".join([chrom, refalt, nm])
+        Alteration = "chr%s,%s,%s" % (chrom, refalt, nm)
       elif exon != []:
-        Alteration = ",".join([chrom, refalt, exon])
+        Alteration = "chr%s,%s,exon %s" % (chrom, refalt, exon)
       else:
-        Alteration = ",".join([chrom, refalt])
+        Alteration = "chr%s,%s" % (chrom, refalt)
     out_df.insert(0, 'Gene', Gene)
     out_df.insert(1, 'Variant', Alteration)
     out_df.insert(2, 'Source', source)
@@ -420,7 +433,7 @@ def search_others(gene, var, var_type, assembly):
   # Generate var_range for searching Therapy
   var_range = ",".join([str(var_id) for var_id in mvar_ids])
   if var_range != "":
-    therapy_detail = cursor.execute('SELECT * FROM TherapyDetail WHERE SourceID != 4 AND OriginID IN (SELECT ID FROM OriginDic WHERE Name LIKE "%{0}%" OR Name = "Unknown") AND ID IN (SELECT DetailID FROM TherapyHasDetail WHERE TherapyID IN (SELECT ID FROM Therapy WHERE VariantID IN ({1})));'.format('Somatic', var_range))
+    therapy_detail = cursor.execute('SELECT * FROM TherapyDetail WHERE SourceID != 4 AND OriginID IN (SELECT ID FROM OriginDic WHERE Name LIKE "%{0}%") AND ID IN (SELECT DetailID FROM TherapyHasDetail WHERE TherapyID IN (SELECT ID FROM Therapy WHERE VariantID IN ({1})));'.format('Somatic', var_range))
     therapy_detail = cursor.fetchall()
     # Change the format
     out = [list(item) for item in therapy_detail]
