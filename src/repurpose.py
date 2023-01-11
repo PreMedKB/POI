@@ -80,17 +80,13 @@ def drug_repurpose(somatic_anno, germline_anno, race, disease_id, db, cursor):
   
   
   # Filter by Population_AF, Pathogenic Prediction, Clinical Significance
-  if variant.empty is False:
-    # Only retain the first protein change
-    index1 = variant[variant['Clinical_Significance'].str.contains(r'Pathogenic|Likely_pathogenic', regex=True)].index.to_list()
-    index2 = variant[variant['Population_AF'] < 0.01].index.to_list()
-    index3 = variant[variant['Pathogenic_Prediction'] == 'Deleterious'].index.to_list()
-    index_123 = index1 + index2 + index3
-    statistic = pd.DataFrame(pd.value_counts(index_123), columns=['Count'])
-    index_final = statistic[statistic.Count > 1].index.to_list()
-    varf = variant[variant.index.isin(index_final)]
-  else:
-    varf = pd.DataFrame()
+  index1 = variant[variant['Clinical_Significance'].str.contains(r'Pathogenic|Likely_pathogenic', regex=True)].index.to_list()
+  index2 = variant[variant['Population_AF'] < 0.01].index.to_list()
+  index3 = variant[variant['Pathogenic_Prediction'] == 'Deleterious'].index.to_list()
+  index_123 = index1 + index2 + index3
+  statistic = pd.DataFrame(pd.value_counts(index_123), columns=['Count'])
+  index_final = statistic[statistic.Count > 1].index.to_list()
+  varf = variant[variant.index.isin(index_final)]
   
 
   ###################
