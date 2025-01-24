@@ -69,26 +69,3 @@ More information is available at https://www.pharmgkb.org/page/biogeographicalGr
 The report is created in `${sample_id}.html` at the `outdir` by default.
 
 For more detailed instructions, run `panno -h`.
-
-## Examples
-
-The `demo` directory contains the VCF files and PAnno reports of four Coriell samples: NA10859 (European), NA19147 (African American/Afro-Caribbean), NA19785 (Latino), and HG00436 (East Asian).
-
-In addition, we analyzed the germline variants of 88 samples which have been characterized in the GeT-RM PGx studies.
-
-* The VCF files are available at https://github.com/PreMedKB/PAnno-analysis/tree/main/vcf.
-* The PAnno reports are available at https://github.com/PreMedKB/PAnno-analysis/tree/main/report.
-
-Here is a snapshot from the PAnno report:
-<p align="center">
-<img src="https://raw.githubusercontent.com/premedkb/panno/main/docs/images/panno_report.png" width="100%" />
-</p>
-
-## Core Components
-A ranking model dedicated to inferring diplotypes, developed based on the **allele (haplotype) definition** and **population frequency**, was introduced in PAnno. The predictive performance was validated in comparison with four similar tools using the consensus diplotype data of the Genetic Testing Reference Materials Coordination Program (GeT-RM) as ground truth.
-
-An annotation method was proposed to summarize prescriptions and classify drugs into **avoid use**, **use with caution**, and **routine use**, following the recommendations of the Clinical Pharmacogenetics Implementation Consortium (CPIC), etc. It further predicts phenotypes of specific drugs in terms of toxicity, dosage, efficacy, and metabolism by integrating the high-confidence clinical annotations in the Pharmacogenomics Knowledgebase (PharmGKB).
-
-<p align="center">
-<img src="https://raw.githubusercontent.com/premedkb/panno/main/docs/images/architecture.png" width="70%" />
-</p>
