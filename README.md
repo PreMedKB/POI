@@ -1,10 +1,8 @@
-<p align="left" margin-bottom="-2rem"> <img src="https://raw.githubusercontent.com/premedkb/panno/main/docs/images/panno_logo.png" width="40%"/> </p>
-
-## PAnno: A Pharmacogenomics Annotation Tool for Clinical Genomic Testing
+## POI: Personal Omics Interpreter
 
 ![PyPI](https://img.shields.io/pypi/v/panno?color=pink)  ![Conda](https://img.shields.io/conda/v/lyaqing/panno?color=blue&label=conda) ![AppVeyor](https://img.shields.io/appveyor/build/PreMedKB/PAnno)
 
-PAnno reports **prescribing recommendations** and **drug response phenotypes** by parsing the germline variant call format (VCF) file from NGS and the population to which the individual belongs.
+POI (Personal Omics Interpreter) is an efficient and user-friendly tool that assists clinicians and researchers in resolving patients' multi-omics therapeutic biomarkers to obtain treatments supported by clinical evidence or potentially feasible.
 
 ## Installation
 
