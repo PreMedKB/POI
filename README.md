@@ -6,8 +6,6 @@ POI (Personal Omics Interpreter) is an efficient and user-friendly tool that ass
 
 ### Usage
 ```
-
-
 Once installed, you can use PAnno by navigating to your VCF file and entering the corresponding three-letter abbreviation of the population:
 
 ```Shell
