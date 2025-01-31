@@ -6,7 +6,7 @@ POI (Personal Omics Interpreter) is an efficient and user-friendly tool that ass
 
 Prerequisite: To ensure smooth usage, [Python >= 3.6](https://docs.conda.io/en/latest/miniconda.html#system-requirements), or [Miniconda/Anaconda](https://docs.conda.io/en/latest/miniconda.html#system-requirements) are required.
 ```
-git clone https://github.com/PreMedKB/PAnno.git; pip install PAnno
+git clone https://github.com/PreMedKB/POI.git
 ```
 
 ### Usage
