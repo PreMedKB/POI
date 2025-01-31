@@ -7,5 +7,4 @@ POI (Personal Omics Interpreter) is an efficient and user-friendly tool that ass
 After the installation is complete, you can start POI using the following command:
 ```
 python poi.py
-
 ```
