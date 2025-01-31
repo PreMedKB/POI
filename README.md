@@ -4,26 +4,6 @@
 
 POI (Personal Omics Interpreter) is an efficient and user-friendly tool that assists clinicians and researchers in resolving patients' multi-omics therapeutic biomarkers to obtain treatments supported by clinical evidence or potentially feasible.
 
-## Installation
-
-*Prerequisite: To ensure smooth installation and usage, [Python >= 3.7](https://docs.conda.io/en/latest/miniconda.html#system-requirements) (#1 and #3 below), or [Miniconda/Anaconda](https://docs.conda.io/en/latest/miniconda.html#system-requirements) (#2 below) are required.*
-
-1. You can install PAnno from [PyPI](https://pypi.org/project/panno/) using pip as follows:
-```Shell
-pip install panno==0.3.1
-```
-
-2. Alternatively, you can create a environment using [Conda](https://anaconda.org/lyaqing/panno).
-```Shell
-conda create -n PAnno panno=0.3.1 -c lyaqing -c conda-forge -c bioconda
-conda activate PAnno
-```
-
-3. If you would like the development version instead, the command is:
-```Shell
-pip install --upgrade --force-reinstall git+https://github.com/PreMedKB/PAnno.git
-# Or download first and install later
-git clone https://github.com/PreMedKB/PAnno.git; pip install PAnno
 ```
 
 ## Usage
