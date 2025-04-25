@@ -1,0 +1,77 @@
+NG_008385.2 (ATG start)	1A>G	55C>A	89C>T	121A>G	146A>G	3215G>C	3233G>A	3276T>C	3294G>C	3300G>T	3336T>C	3531delAGAAATGGAA	3534A>G	3548C>T	3549G>A	3551C>T	3552G>A; 3552G>T	3567C>G; 3567C>T	3572C>T	3573G>A	3608C>T	3609G>A	3623G>A	3627G>A; 3627G>T	9100C>A	9103C>T	9187A>G	9225A>C	9235T>C	9256A>T	10447A>G	10462C>T	10535A>G	10598A>G	10601delA	33437C>A	33441C>G	33452A>G	33497A>G	33498C>G	33551C>T	42517G>T	42519T>C	42542C>T	42543G>A	42548C>A	42568C>A	42599G>A	42614A>C	42615T>C	42619C>G	42620C>A	42623C>G	42683C>T	42689G>A	47360A>G	47391A>C	50170C>T	50173A>T	50198G>T	50235G>C	50243A>G	50273T>C	50302G>A	50338C>T	50341G>T
+Effect on protein (NP_000762.2)	p.M1V	p.L19I	p.P30L	p.N41D	p.D49G	p.G70R	p.V76M	p.L90P	p.G96A	p.G98V	p.F110S	p.K118fs	p.K119R	p.R124W	p.R124Q	p.R125C	p.R125H; p.R125L	p.T130R; p.T130M	p.R132W	p.R132Q	p.R144C	p.R144H	p.A149T	p.R150H; p.R150L	p.S162X	p.P163L	p.D191G	p.N204H	p.I207T	p.Q214L	p.I222V	p.P227S	p.H251R	p.E272G	p.K273fs	p.P279T	p.S280C	p.I284V	p.T299A	p.T299R	p.P317S	p.E326D	p.I327T	p.R335W	p.R335Q	p.P337T	p.S343R	p.E354K	p.I359L	p.I359T	p.D360E	p.L361I	p.L362V	p.P382S	splicing defect	p.I387V	p.D397A	p.R433W	p.I434F	p.G442V	p.Q454H	p.N457S	p.L467P	p.A477T	p.P489S	p.V490F
+Position at NC_000010.11 (Homo sapiens chromosome 10, GRCh38.p13)	g.94938683A>G	g.94938737C>A	g.94938771C>T	g.94938803A>G	g.94938828A>G	g.94941897G>C	g.94941915G>A	g.94941958T>C	g.94941976G>C	g.94941982G>T	g.94942018T>C	g.94942213_94942222del	g.94942216A>G	g.94942230C>T	g.94942231G>A	g.94942233C>T	g.94942234G>A; g.94942234G>T	g.94942249C>G; g.94942249C>T	g.94942254C>T	g.94942255G>A	g.94942290C>T	g.94942291G>A	g.94942305G>A	g.94942309G>A; g.94942309G>T	g.94947782C>A	g.94947785C>T	g.94947869A>G	g.94947907A>C	g.94947917T>C	g.94947938A>T	g.94949129A>G	g.94949144C>T	g.94949217A>G	g.94949280A>G	g.94949283del	g.94972119C>A	g.94972123C>G	g.94972134A>G	g.94972179A>G	g.94972180C>G	g.94972233C>T	g.94981199G>T	g.94981201T>C	g.94981224C>T	g.94981225G>A	g.94981230C>A	g.94981250C>A	g.94981281G>A	g.94981296A>C	g.94981297T>C	g.94981301C>G	g.94981302C>A	g.94981305C>G	g.94981365C>T	g.94981371G>A	g.94986042A>G	g.94986073A>C	g.94988852C>T	g.94988855A>T	g.94988880G>T	g.94988917G>C	g.94988925A>G	g.94988955T>C	g.94988984G>A	g.94989020C>T	g.94989023G>T
+Position at NG_008385.2 (CYP2C9 RefSeqGene; forward relative to chromosome)	g.5526A>G	g.5580C>A	g.5614C>T	g.5646A>G	g.5671A>G	g.8740G>C	g.8758G>A	g.8801T>C	g.8819G>C	g.8825G>T	g.8861T>C	g.9056_9065del	g.9059A>G	g.9073C>T	g.9074G>A	g.9076C>T	g.9077G>A; g.9077G>T	g.9092C>G; g.9092C>T	g.9097C>T	g.9098G>A	g.9133C>T	g.9134G>A	g.9148G>A	g.9152G>A; g.9152G>T	g.14625C>A	g.14628C>T	g.14712A>G	g.14750A>C	g.14760T>C	g.14781A>T	g.15972A>G	g.15987C>T	g.16060A>G	g.16123A>G	g.16126del	g.38962C>A	g.38966C>G	g.38977A>G	g.39022A>G	g.39023C>G	g.39076C>T	g.48042G>T	g.48044T>C	g.48067C>T	g.48068G>A	g.48073C>A	g.48093C>A	g.48124G>A	g.48139A>C	g.48140T>C	g.48144C>G	g.48145C>A	g.48148C>G	g.48208C>T	g.48214G>A	g.52885A>G	g.52916A>C	g.55695C>T	g.55698A>T	g.55723G>T	g.55760G>C	g.55768A>G	g.55798T>C	g.55827G>A	g.55863C>T	g.55866G>T
+rsID	rs114071557	rs67807361	rs142240658	rs2031308986	rs564813580	rs371055887	rs1216169538	rs72558187	rs761033063	rs762239445		rs1304490498	rs774607211	rs767576260	rs12414460	rs375805362	rs72558189	rs200965026	rs199523631	rs200183364	rs1799853	rs141489852	rs754487195	rs7900194	rs72558190	rs774550549			rs1326630788	rs2031531005			rs2256871	rs9332130	rs9332131	rs182132442			rs72558192	rs988617574	rs1237225311	rs147665916	rs57505750	rs28371685	rs367826293	rs1274535931	rs750820937	rs749060448	rs1057910	rs56165452	rs28371686	rs1250577724	rs578144976		rs542577750	rs764211126	rs72558193	rs776908257			rs769942899	rs202201137	rs767284820	rs781583846	rs9332239	rs868182778
+CYP2C9 Allele																																																																		
+*1	A	C	C	A	A	G	G	T	G	G	T	AGAAATGGAA	A	C	G	C	G	C	C	G	C	G	G	G	C	C	A	A	T	A	A	C	A	A	A	C	C	A	A	C	C	G	T	C	G	C	C	G	A	T	C	C	C	C	G	A	A	C	A	G	G	A	T	G	C	G
+*2																					T																																													
+*3																																																	C																	
+*4																																																		C																
+*5																																																			G															
+*6																																			delA																															
+*7		A																																																																
+*8																								A																																										
+*9																																	G																																	
+*10																																		G																																
+*11																																												T																						
+*12																																																																	T	
+*13								C																																																										
+*14																	A																																																	
+*15																									A																																									
+*16																																							G																											
+*17																																																						T												
+*18																																																	C								C									
+*19																																																													C					
+*20						C																																																												
+*21			T																																																															
+*22				G																																																														
+*23							A																																																											
+*24																																																A																		
+*25												delAGAAATGGAA																																																						
+*26																		G																																																
+*27																								T																																										
+*28																														T																																				
+*29																																				A																														
+*30																																																																A		
+*31																																											C																							
+*32																																																																		T
+*33																				A																																														
+*34																																													A																					
+*35																	T				T																																													
+*36	G																																																																	
+*37					G																																																													
+*38									C																																																									
+*39										T																																																								
+*40											C																																																							
+*41													G																																																					
+*42															A																																																			
+*43														T																																																				
+*44																		T																																																
+*45																			T																																															
+*46																							A																																											
+*47																										T																																								
+*48																													C																																					
+*49																															G																																			
+*50																																T																																		
+*51																																						G																												
+*52																																								G																										
+*53																																									T																									
+*54																																															A																			
+*55																																																				A														
+*56																																																								G										
+*57																												C																																						
+*58																																														A																				
+*59																																																											T							
+*60																																																															C			
+*61																					T																																									G				
+*62																T																																																		
+*63																						A																																												
+*64																																					G																													
+*65																																										T																								
+*66																																																					G													
+*67																																																										T								
+*68																																																	C						A											
+*69																											G																																							
+*70																																																												T						
+*71																																		G																															T	

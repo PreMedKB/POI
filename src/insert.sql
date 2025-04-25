@@ -1,0 +1,9 @@
+-- ('example1', 'example1', 0, '/mnt/case/example1/', '2022-12-03 18:08:08', 'Breast', 'Breast Neoplasm', 'East Asia', 1, 0, 'hg38', 1, 0, 'hg38', 0, 0, 0, 0, 'yes', 'no')
+-- ('example2', 'example2', 0, '/mnt/case/example2/', '2022-12-03 18:08:08', 'Uterus', 'Uterine Neoplasm', 'East Asia', 1, 0, 'hg38', 1, 0, 'hg38', 0, 0, 0, 0, 'yes', 'no')
+-- ('example3', 'example3', 0, '/mnt/case/example3/', '2022-12-03 18:08:08', 'Lung', 'Lung Neoplasm', 'African American', 1, 0, 'hg38', 1, 0, 'hg38', 0, 0, 0, 0, 'yes', 'no')
+
+INSERT INTO POI.Case (Title, Token, Status, FilePath, DateTime, Tissue, Disease, Population, SomaticVCF, SomaticBed, SomaticRefGenome, GermlineVCF, GermlineBed, GermlineRefGenome, CNV, GeneFusion, TumorExp, NormalExp, TMB, MSI) VALUES ('example1', 'example1', 0, '/mnt/case/example1/', '2022-12-03 18:08:08', 'Breast', 'Breast Neoplasm', 'East Asia', 1, 0, 'hg38', 1, 0, 'hg38', 0, 0, 0, 0, 'yes', 'no');
+
+INSERT INTO POI.Case (Title, Token, Status, FilePath, DateTime, Tissue, Disease, Population, SomaticVCF, SomaticBed, SomaticRefGenome, GermlineVCF, GermlineBed, GermlineRefGenome, CNV, GeneFusion, TumorExp, NormalExp, TMB, MSI) VALUES ('example2', 'example2', 0, '/mnt/case/example2/', '2022-12-03 18:08:08', 'Uterus', 'Uterine Neoplasm', 'East Asia', 1, 0, 'hg38', 1, 0, 'hg38', 0, 0, 0, 0, 'yes', 'no');
+
+INSERT INTO POI.Case (Title, Token, Status, FilePath, DateTime, Tissue, Disease, Population, SomaticVCF, SomaticBed, SomaticRefGenome, GermlineVCF, GermlineBed, GermlineRefGenome, CNV, GeneFusion, TumorExp, NormalExp, TMB, MSI) VALUES ('example3', 'example3', 0, '/mnt/case/example3/', '2022-12-03 18:08:08', 'Lung', 'Lung Neoplasm', 'African American', 1, 0, 'hg38', 1, 0, 'hg38', 0, 0, 0, 0, 'yes', 'no');

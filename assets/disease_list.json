@@ -1,0 +1,289 @@
+{
+    "Thyroid": [
+        "Thyroid Gland Anaplastic Carcinoma",
+        "Thyroid Gland Neoplasm",
+        "Thyroid Gland Follicular Carcinoma",
+        "Thyroid Gland Papillary Carcinoma",
+        "Thyroid Gland Medullary Carcinoma"
+    ],
+    "Eye": [
+        "Conjunctival Melanoma",
+        "Uveal Melanoma",
+        "Retinoblastoma",
+        "Ocular Melanoma"
+    ],
+    "Uterus": [
+        "Uterine Neoplasm",
+        "Cervical Neoplasm",
+        "Endometrial Neoplasm",
+        "uterine corpus endometrial neoplasm",
+        "endometrial serous neoplasm"
+    ],
+    "Peripheral Nervous System": [
+        "Vestibular Schwannoma",
+        "Schwannoma",
+        "Plexiform Neurofibroma",
+        "Neurofibroma",
+        "Malignant Peripheral Nerve Sheath Tumor",
+        "Neuroblastoma"
+    ],
+    "Lung": [
+        "Lung Small Cell Carcinoma",
+        "Lung Non-Small Cell Carcinoma",
+        "Lung Adenosquamous Carcinoma",
+        "Lung Squamous Cell Carcinoma",
+        "Lung Large Cell Carcinoma",
+        "Lung Neoplasm"
+    ],
+    "Soft Tissue": [
+        "Alveolar Rhabdomyosarcoma",
+        "Tenosynovial Giant Cell Tumor",
+        "Desmoid-Type Fibromatosis",
+        "Liposarcoma",
+        "Synovial Sarcoma",
+        "Angiosarcoma",
+        "Congenital Peribronchial Myofibroblastic Tumor",
+        "Rhabdomyosarcoma",
+        "Gastrointestinal Stromal Tumor",
+        "Histiocytic and Dendritic Cell Neoplasm",
+        "Inflammatory Myofibroblastic Tumor",
+        "Myxoid Liposarcoma",
+        "Histiocytoma",
+        "Infantile Fibrosarcoma",
+        "Sarcoma",
+        "Spindle Cell Sarcoma",
+        "epithelioid inflammatory myofibroblastic sarcoma"
+    ],
+    "Esophagus/Stomach": [
+        "Esophageal Squamous Cell Carcinoma",
+        "Malignant Esophageal Neoplasm",
+        "Gastric Neoplasm",
+        "Esophageal Neoplasm",
+        "Ureter Small Cell Carcinoma",
+        "Gastric Neuroendocrine Neoplasm",
+        "gastroesophageal junction neoplasm"
+    ],
+    "Bone": [
+        "Osteosarcoma",
+        "Chordoma",
+        "Extraskeletal Myxoid Chondrosarcoma",
+        "Chondrosarcoma"
+    ],
+    "Bowel": [
+        "Colorectal Neoplasm",
+        "Anal Melanoma",
+        "Colon Neoplasm",
+        "Colorectal Adenocarcinoma",
+        "Small Intestinal Neuroendocrine Neoplasm",
+        "Digestive System Neuroendocrine Neoplasm",
+        "Rectal Carcinoma",
+        "Appendix Neoplasm",
+        "Colorectal Neuroendocrine Neoplasm",
+        "Esophageal Neuroendocrine Neoplasm",
+        "Rectal Neoplasm",
+        "colon mucinous neoplasm",
+        "colon signet ring neoplasm"
+    ],
+    "Other": [
+        "Papillary Neoplasm",
+        "Secondary Neoplasm",
+        "Digestive System Neoplasm",
+        "Squamous Cell Neoplasm",
+        "Neuroendocrine Neoplasm",
+        "Mucosal Melanoma",
+        "Small Cell Carcinoma",
+        "peutz-jeghers syndrome",
+        "clear cell sarcoma",
+        "Solid Neoplasm",
+        "tuberous sclerosis",
+        "kabuki syndrome",
+        "von hippel-lindau disease"
+    ],
+    "Biliary Tract": [
+        "Intrahepatic Cholangiocarcinoma",
+        "Biliary Tract Carcinoma",
+        "Cholangiocarcinoma",
+        "Bile Duct Neoplasm",
+        "Cholangiolocellular Carcinoma"
+    ],
+    "Prostate": [
+        "Prostate Adenocarcinoma",
+        "Prostate Neoplasm"
+    ],
+    "CNS/Brain": [
+        "Primary Peritoneal Carcinoma",
+        "Childhood Medulloblastoma",
+        "Pleomorphic Xanthoastrocytoma",
+        "Medulloblastoma",
+        "Ganglioglioma",
+        "Glioma",
+        "Brain Neoplasm",
+        "Pilocytic Astrocytoma",
+        "Malignant Glioma",
+        "Leukemia",
+        "Diffuse Astrocytoma",
+        "Malignant Solid Neoplasm",
+        "Anaplastic Astrocytoma",
+        "Medulloblastoma, SHH-Activated, TP53-Mutant",
+        "Malignant Mesothelioma",
+        "Neoplasm",
+        "Transitional Cell Neoplasm",
+        "Oligodendroglioma",
+        "Malignant Neoplasm",
+        "Diffuse Midline Glioma, H3 K27M-Mutant",
+        "Lymphoma",
+        "Sarcomatoid Carcinoma",
+        "Childhood Pilocytic Astrocytoma",
+        "Glioblastoma",
+        "brain glioma",
+        "glioblastoma proneural subtype",
+        "childhood low-grade glioma"
+    ],
+    "Bladder/Urinary Tract": [
+        "Infiltrating Bladder Urothelial Carcinoma",
+        "Renal Pelvis Urothelial Carcinoma",
+        "Bladder Neoplasm",
+        "Urothelial Neoplasm"
+    ],
+    "Thymus": [
+        "Thymus Neoplasm"
+    ],
+    "Testis": [
+        "Testicular Neoplasm"
+    ],
+    "Kidney": [
+        "Papillary Renal Cell Carcinoma",
+        "Rhabdoid Tumor",
+        "Kidney Neoplasm",
+        "Clear Cell Renal Cell Carcinoma"
+    ],
+    "Vulva/Vagina": [
+        "Vaginal Sarcoma"
+    ],
+    "Head and Neck": [
+        "Oropharyngeal Neoplasm",
+        "Malignant Salivary Gland Neoplasm",
+        "Head and Neck Neoplasm",
+        "Head and Neck Squamous Cell Carcinoma",
+        "Laryngeal Squamous Cell Carcinoma",
+        "Sinonasal Undifferentiated Carcinoma",
+        "Nasopharyngeal Carcinoma",
+        "NUT Carcinoma",
+        "Salivary Gland Adenoid Cystic Carcinoma",
+        "Nasopharyngeal Neoplasm",
+        "mammary analogue secretory neoplasm",
+        "Salivary Gland Neoplasm",
+        "Oropharyngeal Carcinoma"
+    ],
+    "Pancreas": [
+        "Pancreatic Neoplasm",
+        "Pancreatic Neuroendocrine Neoplasm",
+        "pancreatic ductal neoplasm"
+    ],
+    "Breast": [
+        "Breast Angiosarcoma",
+        "Breast Secretory Carcinoma",
+        "Breast Neoplasm",
+        "Breast Ductal Carcinoma",
+        "Breast Inflammatory Carcinoma",
+        "estrogen-receptor positive breast neoplasm",
+        "estrogen-receptor negative breast neoplasm",
+        "her2-receptor positive breast neoplasm",
+        "her2-receptor negative breast neoplasm",
+        "triple-receptor negative breast neoplasm"
+    ],
+    "Myeloid": [
+        "Polycythemia Vera",
+        "Chronic Myelogenous Leukemia, BCR-ABL1 Positive",
+        "Chronic Leukemia",
+        "Systemic Mastocytosis",
+        "Acute Myeloid Leukemia with Maturation",
+        "Erdheim-Chester Disease",
+        "Myelodysplastic Syndrome",
+        "Core Binding Factor Acute Myeloid Leukemia",
+        "Mixed Phenotype Acute Leukemia",
+        "Acute Myeloid Leukemia",
+        "Myeloid Neoplasm",
+        "Chronic Neutrophilic Leukemia",
+        "Myelodysplastic/Myeloproliferative Neoplasm",
+        "Atypical Chronic Myeloid Leukemia, BCR-ABL1 Negative",
+        "Myeloid/Lymphoid Neoplasms with Eosinophilia and Rearrangement of PDGFRA, PDGFRB, or FGFR1, or with PCM1-JAK2",
+        "Myeloproliferative Neoplasm",
+        "myelofibrosis",
+        "Acute Promyelocytic Leukemia with PML-RARA",
+        "Langerhans Cell Sarcoma",
+        "Langerhans Cell Histiocytosis",
+        "chuvash polycythemia"
+    ],
+    "Peritoneum": [
+        "Peritoneal Mesothelioma",
+        "Malignant Peritoneal Neoplasm"
+    ],
+    "Skin": [
+        "Basal Cell Neoplasm",
+        "Skin Squamous Cell Carcinoma",
+        "Merkel Cell Carcinoma",
+        "Experimental Organism Basal Cell Carcinoma",
+        "Scrotal Paget Disease",
+        "Melanoma",
+        "Dermatofibrosarcoma Protuberans",
+        "Skin Basal Cell Carcinoma",
+        "Congenital Melanocytic Nevus"
+    ],
+    "Adrenal Gland": [
+        "Adrenal Cortex Neoplasm",
+        "Adrenal Gland Neoplasm"
+    ],
+    "Cervix": [
+        "Cervical Squamous Cell Carcinoma, Not Otherwise Specified",
+        "Mucinous Neoplasm"
+    ],
+    "Pleura": [
+        "Pleural Malignant Mesothelioma"
+    ],
+    "Lymphoid": [
+        "Burkitt Lymphoma",
+        "B Lymphoblastic Leukemia/Lymphoma, BCR-ABL1-Like",
+        "Plasma Cell Myeloma",
+        "Nasal Type Extranodal NK/T-Cell Lymphoma",
+        "Acute Lymphoblastic Leukemia",
+        "Childhood Acute Lymphoblastic Leukemia",
+        "Hematopoietic and Lymphoid Cell Neoplasm",
+        "Chronic Lymphocytic Leukemia/Small Lymphocytic Lymphoma",
+        "Mantle Cell Lymphoma",
+        "Sezary Syndrome",
+        "Follicular Lymphoma",
+        "Childhood B Acute Lymphoblastic Leukemia",
+        "Mature T-Cell and NK-Cell Non-Hodgkin Lymphoma",
+        "Anaplastic Large Cell Lymphoma",
+        "Chronic Lymphocytic Leukemia",
+        "Hairy Cell Leukemia",
+        "B Lymphoblastic Leukemia/Lymphoma",
+        "Marginal Zone Lymphoma",
+        "Diffuse Large B-Cell Lymphoma",
+        "Adult B Acute Lymphoblastic Leukemia",
+        "t-cell lymphoblastic leukemia/lymphoma",
+        "waldenstroem's macroglobulinemia",
+        "adult t-cell leukemia"
+    ],
+    "Ovary/Fallopian Tube": [
+        "Malignant Ovarian Neoplasm",
+        "Ovarian Epithelial Tumor",
+        "Ovarian Serous Adenocarcinoma",
+        "Ovarian Endometrioid Adenocarcinoma",
+        "Ovarian Clear Cell Tumor",
+        "Ovarian Serous Tumor",
+        "Fallopian Tube Neoplasm",
+        "Ovarian Small Cell Carcinoma",
+        "Ovarian Endometrioid Tumor",
+        "Ovarian Neoplasm",
+        "ovarian serous cystneoplasm"
+    ],
+    "Liver": [
+        "Adult Hepatocellular Carcinoma",
+        "Adult Liver Carcinoma",
+        "Hepatocellular Carcinoma",
+        "Liver and Intrahepatic Bile Duct Carcinoma",
+        "Childhood Hepatocellular Carcinoma"
+    ]
+}
