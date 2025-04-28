@@ -4,7 +4,9 @@ POI (Personal Omics Interpreter) is an efficient and user-friendly tool that ass
 
 ### Download
 
-Prerequisite: To ensure smooth usage, [Python >= 3.6](https://docs.conda.io/en/latest/miniconda.html#system-requirements), or [Miniconda/Anaconda](https://docs.conda.io/en/latest/miniconda.html#system-requirements) are required.
+Prerequisite: 
+1. You need install [Python >= 3.6](https://docs.conda.io/en/latest/miniconda.html#system-requirements), or [Miniconda/Anaconda](https://docs.conda.io/en/latest/miniconda.html#system-requirements).
+2. You need install ANNOVAR version >= 2016-02-01.
 ```
 git clone https://github.com/PreMedKB/POI.git
 ```
@@ -13,5 +15,6 @@ git clone https://github.com/PreMedKB/POI.git
 
 After the download is complete, you can start POI using the following command:
 ```
+cd POI
 python3.6 poi.py
 ```
